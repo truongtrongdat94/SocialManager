@@ -105,7 +105,7 @@ class AuthServiceTest {
         clearUsers();
         String safe = sanitize(username, 3, 20);
 
-        RegisterRequest req = new RegisterRequest(safe, "password123", "Test User");
+        RegisterRequest req = new RegisterRequest(safe, safe + "@test.com", "password123", "Test User");
         authService.register(req);
 
         assertThatThrownBy(() -> authService.register(req))
@@ -126,7 +126,7 @@ class AuthServiceTest {
         if (safePass.length() < 8) safePass = safePass + "aaaaaaaa";
         if (safePass.length() > 20) safePass = safePass.substring(0, 20);
 
-        authService.register(new RegisterRequest(safe, safePass, "Test User"));
+        authService.register(new RegisterRequest(safe, safe + "@test.com", safePass, "Test User"));
 
         User saved = userRepository.findByUsername(safe).orElseThrow();
         assertThat(saved.getPassword()).isNotEqualTo(safePass);
@@ -161,7 +161,7 @@ class AuthServiceTest {
         clearUsers();
         String safe = sanitize(username, 3, 20);
 
-        authService.register(new RegisterRequest(safe, safeCorrect, "User"));
+        authService.register(new RegisterRequest(safe, safeWrong + "@test.com", safeCorrect, "User"));
 
         assertThatThrownBy(() -> authService.login(new LoginRequest(safe, safeWrong)))
                 .isInstanceOf(BadCredentialsException.class);
@@ -180,7 +180,7 @@ class AuthServiceTest {
         if (safePass.length() < 8) safePass = safePass + "aaaaaaaa";
         if (safePass.length() > 20) safePass = safePass.substring(0, 20);
 
-        authService.register(new RegisterRequest(safe, safePass, "User"));
+        authService.register(new RegisterRequest(safe, safe + "@test.com", safePass, "User"));
         String token = authService.login(new LoginRequest(safe, safePass));
 
         assertThat(token).isNotBlank();
@@ -200,7 +200,7 @@ class AuthServiceTest {
         String googleEmail = safe + "@shared.com";
 
         // Local account — no email
-        authService.register(new RegisterRequest(safe, "password123", "Local User"));
+        authService.register(new RegisterRequest(safe, safe + "@local.com", "password123", "Local User"));
         // Google account — separate record with its own email
         authService.processOAuthUser(googleEmail, "Google User", googleId);
 
