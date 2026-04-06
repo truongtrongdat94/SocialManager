@@ -70,7 +70,7 @@ class AuthControllerTest {
         String safePass = sanitize(shortPassword, 1, 7);
         if (safePass.length() >= 8) safePass = safePass.substring(0, 7);
 
-        RegisterRequest req = new RegisterRequest(safe, safePass, "Test User");
+        RegisterRequest req = new RegisterRequest(safe, safe + "@test.com", safePass, "Test User");
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
@@ -84,7 +84,7 @@ class AuthControllerTest {
             @ForAll @NotBlank @StringLength(min = 3, max = 20) String username) {
         userRepository.deleteAllInBatch();
         String safe = sanitize(username, 3, 20);
-        authService.register(new RegisterRequest(safe, "password123", "Test User"));
+        authService.register(new RegisterRequest(safe, safe + "@test.com", "password123", "Test User"));
 
         UserDto dto = authService.getCurrentUser(safe);
         assertThat(dto.username()).isEqualTo(safe);
