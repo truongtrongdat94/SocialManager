@@ -10,6 +10,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -30,29 +31,54 @@ public class SecurityConfig {
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2AuthenticationSuccessHandler oAuth2SuccessHandler;
 
+//    @Bean
+//    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+//        http
+//            .csrf(csrf -> csrf.disable())
+//            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+//            .sessionManagement(session ->
+//                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+//            .authorizeHttpRequests(auth -> auth
+//                .requestMatchers(
+//                    "/api/auth/**", "/auth/**", "/oauth2/**", "/login/**",
+//                    "/actuator/health",
+//                    "/swagger-ui.html", "/swagger-ui/**",
+//                    "/v3/api-docs/**"
+//                ).permitAll()
+//                .anyRequest().authenticated()
+//            )
+//            .oauth2Login(oauth2 -> oauth2
+//                .userInfoEndpoint(userInfo ->
+//                    userInfo.oidcUserService(customOAuth2UserService))
+//                .successHandler(oAuth2SuccessHandler)
+//            )
+//            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+//
+//        return http.build();
+//    }
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable())
+            .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .sessionManagement(session ->
-                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
-                    "/api/auth/**", "/auth/**", "/oauth2/**", "/login/**",
+                    "/api/auth/**",
+                    "/api/social-accounts/**",   //  cho phép connect FB/Tiktok
+                    "/oauth2/**",
+                    "/login/**",
                     "/actuator/health",
                     "/swagger-ui.html", "/swagger-ui/**",
                     "/v3/api-docs/**"
-                ).permitAll()
-                .anyRequest().authenticated()
-            )
-            .oauth2Login(oauth2 -> oauth2
-                .userInfoEndpoint(userInfo ->
-                    userInfo.oidcUserService(customOAuth2UserService))
-                .successHandler(oAuth2SuccessHandler)
-            )
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
-
+                ).permitAll().anyRequest().authenticated())
+                .oauth2Login(oauth2 -> oauth2
+                        .userInfoEndpoint(userInfo ->
+                                userInfo.oidcUserService(customOAuth2UserService))
+                        .successHandler(oAuth2SuccessHandler)
+                )
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
