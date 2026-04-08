@@ -2,7 +2,7 @@ spring:
   application:
     name: social-manager-backend
   config:
-    import: optional:file:../.env[.properties]
+    import: optional:file:.env.properties
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
   datasource:
