@@ -17,10 +17,9 @@ public class CustomOAuth2UserService implements OAuth2UserService<OidcUserReques
     @Override
     public OidcUser loadUser(OidcUserRequest userRequest) throws OAuth2AuthenticationException {
         // Delegate to default OidcUserService to get the OidcUser with all claims
-        OidcUser oidcUser = delegate.loadUser(userRequest);
         // email, name, sub (googleId) are available via oidcUser.getEmail(),
         // oidcUser.getFullName(), oidcUser.getSubject()
         // Persistence is handled by OAuth2AuthenticationSuccessHandler
-        return oidcUser;
+        return delegate.loadUser(userRequest);
     }
 }
