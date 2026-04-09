@@ -1,6 +1,21 @@
 import api from "../api/axios";
+import { useState } from "react";
 
 export default function Login() {
+    const [form, setForm] = useState({ username: "", password: "" });
+
+    const login = async () => {
+        const res = await api.post("/api/auth/login", form);
+        const token = res.data.data.token;
+
+        // lưu JWT
+        localStorage.setItem("token", token);
+
+        // set default header cho axios
+        api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+        alert("Logged in!");
+    };
+
     const handleFacebookLogin = async () => {
         const res = await api.get("/api/social-accounts/connect/FACEBOOK");
         window.location.href = res.data.data;
@@ -14,10 +29,26 @@ export default function Login() {
     return (
         <div style={{ padding: "2rem" }}>
             <h1>Login</h1>
-            <p>Login page — coming soon</p>
 
-            <button onClick={handleFacebookLogin}>Login with Facebook</button>
-            <button onClick={handleTikTokLogin}>Login with TikTok</button>
+            <input
+                placeholder="username"
+                value={form.username}
+                onChange={(e) => setForm({ ...form, username: e.target.value })}
+            />
+
+            <input
+                placeholder="password"
+                type="password"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+            />
+
+            <button onClick={login}>Login</button>
+
+            <hr />
+
+            <button onClick={handleFacebookLogin}>Connect Facebook</button>
+            <button onClick={handleTikTokLogin}>Connect TikTok</button>
         </div>
     );
 }

@@ -3,6 +3,7 @@ package com.socialmanager.controller;
 import com.socialmanager.dto.ApiResponse;
 import com.socialmanager.model.Platform;
 import com.socialmanager.service.SocialAccountService;
+import com.socialmanager.util.JwtUtil;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -14,73 +15,60 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/social-accounts")
 @RequiredArgsConstructor
 public class SocialAccountController {
-
+    private final JwtUtil jwtUtil;
     private final SocialAccountService socialAccountService;
 
     // 1. Lấy link để user nhảy sang Facebook/TikTok đăng nhập
     @GetMapping("/connect/{platform}")
-    public ResponseEntity<ApiResponse<String>> getConnectUrl(@PathVariable Platform platform) {
-        String url = socialAccountService.generateAuthUrl(platform);
+    public ResponseEntity<ApiResponse<String>> getConnectUrl(@PathVariable Platform platform, Authentication authentication) {
+        String username = authentication.getName();
+        String url = socialAccountService.generateAuthUrl(platform, username);
         return ResponseEntity.ok(ApiResponse.ok(url));
     }
 
     // 2. Tiếp nhận "code" trả về từ Facebook/TikTok sau khi user đồng ý
     @GetMapping("/callback/meta")
     public void handleMetaCallback(
-            @RequestParam(name = "code", required = false) String code,
-            @RequestParam(name = "error", required = false) String error,
-            HttpServletResponse response,
-            Authentication authentication
+        @RequestParam(name = "code", required = false) String code,
+        @RequestParam(name = "error", required = false) String error,
+        HttpServletResponse response,
+        @RequestParam(name = "state", required = false) String state
     ) throws Exception {
+        String username = jwtUtil.getUsernameFromToken(state);
         if (error != null) {
-            response.sendRedirect("http://localhost:3000");
+            response.sendRedirect("http://localhost:3000/failed");
             return;
         }
 
-        String username = authentication != null ? authentication.getName() : "test";
-
         socialAccountService.connectMetaAccount(code, username);
-
-        // redirect về FE sau khi connect xong
-        String redirectUrl = "http://localhost:3000";
-        response.sendRedirect(redirectUrl);
+        response.sendRedirect("http://localhost:3000/success");
     }
 
     @GetMapping("/callback/tiktok")
     public void handleTikTokCallback(
-            @RequestParam(name = "code", required = false) String code,
-            @RequestParam(name = "state", required = false) String state, // Thêm state
-            @RequestParam(name = "error", required = false) String error,
-            HttpServletResponse response,
-            Authentication authentication
+        @RequestParam(name = "code", required = false) String code,
+        @RequestParam(name = "state", required = false) String state, // Thêm state
+        @RequestParam(name = "error", required = false) String error,
+        HttpServletResponse response
     ) throws Exception {
-        System.out.println("=== BẮT ĐẦU VÀO CALLBACK ===");
-        // 1. Xử lý nếu người dùng từ chối cấp quyền hoặc có lỗi
         if (error != null) {
-            response.sendRedirect("http://localhost:3000?error=access_denied");
+            response.sendRedirect("http://localhost:3000/failed");
             return;
         }
 
-
-        // 3. Kiểm tra bảo mật (Xác thực state)
+        // Kiểm tra bảo mật (Xác thực state)
         if (state == null || !SocialAccountService.pkceStorage.containsKey(state)) {
             // Có dấu hiệu tấn công CSRF hoặc session đã hết hạn
             System.out.println(">>> LỖI: STATE KHÔNG KHỚP HOẶC BỊ NULL! <<<");
-            response.sendRedirect("http://localhost:3000?error=invalid_state");
+            response.sendRedirect("http://localhost:3000/failed");
             return;
         }
 
         String codeVerifier = SocialAccountService.pkceStorage.remove(state);
-
-        System.out.println(">>> STATE HỢP LỆ, CHUẨN BỊ GỌI SERVICE <<<");
-
-        String username = authentication != null ? authentication.getName() : "test";
+        String username = jwtUtil.getUsernameFromToken(state);
 
         try {
-            // 4. Sửa lại tên hàm thành connectTikTokAccount và truyền thêm codeVerifier
             socialAccountService.connectTikTokAccount(code, codeVerifier, username);
-            System.out.println("SUCCESS");
-            // Thành công: Redirect về frontend kèm cờ success để frontend hiện thông báo
             response.sendRedirect("http://localhost:3000/success");
         } catch (Exception e) {response.sendRedirect("http://localhost:3000/login");
         }

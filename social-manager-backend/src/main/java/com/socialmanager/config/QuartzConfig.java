@@ -1,6 +1,6 @@
 package com.socialmanager.config;
 
-import com.socialmanager.scheduler.TokenRefreshQuartzJob;
+import com.socialmanager.job.TokenRefreshQuartzJob;
 import org.quartz.CronScheduleBuilder;
 import org.quartz.JobBuilder;
 import org.quartz.JobDetail;
