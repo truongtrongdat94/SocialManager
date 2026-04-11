@@ -18,7 +18,6 @@ public class SocialAccountController {
     private final JwtUtil jwtUtil;
     private final SocialAccountService socialAccountService;
 
-    // 1. Lấy link để user nhảy sang Facebook/TikTok đăng nhập
     @GetMapping("/connect/{platform}")
     public ResponseEntity<ApiResponse<String>> getConnectUrl(@PathVariable Platform platform, Authentication authentication) {
         String username = authentication.getName();
@@ -26,29 +25,64 @@ public class SocialAccountController {
         return ResponseEntity.ok(ApiResponse.ok(url));
     }
 
-    // 2. Tiếp nhận "code" trả về từ Facebook/TikTok sau khi user đồng ý
-    @GetMapping("/callback/meta")
-    public void handleMetaCallback(
+    @GetMapping("/callback/facebook")
+    public void handleFacebookCallback(
         @RequestParam(name = "code", required = false) String code,
         @RequestParam(name = "error", required = false) String error,
-        HttpServletResponse response,
-        @RequestParam(name = "state", required = false) String state
+        @RequestParam(name = "state", required = false) String state,
+        HttpServletResponse response
     ) throws Exception {
-        String username = jwtUtil.getUsernameFromToken(state);
         if (error != null) {
             response.sendRedirect("http://localhost:3000/failed");
             return;
         }
 
-        socialAccountService.connectMetaAccount(code, username);
+        String username = jwtUtil.getUsernameFromToken(state);
+        socialAccountService.connectFacebookAccount(code, username);
         response.sendRedirect("http://localhost:3000/success");
+    }
+
+    @GetMapping("/callback/instagram")
+    public void handleInstagramCallback(
+        @RequestParam(name = "code", required = false) String code,
+        @RequestParam(name = "error", required = false) String error,
+        @RequestParam(name = "state", required = false) String state,
+        HttpServletResponse response
+    ) throws Exception {
+        if (error != null) {
+            response.sendRedirect("http://localhost:3000/failed");
+            return;
+        }
+
+        String username = jwtUtil.getUsernameFromToken(state);
+        socialAccountService.connectInstagramAccount(code, username);
+        response.sendRedirect("http://localhost:3000/success");
+
+    }
+
+    @GetMapping("/callback/threads")
+    public void handleThreadsCallback(
+        @RequestParam(name = "code", required = false) String code,
+        @RequestParam(name = "error", required = false) String error,
+        @RequestParam(name = "state", required = false) String state,
+        HttpServletResponse response
+    ) throws Exception {
+        if (error != null) {
+            response.sendRedirect("http://localhost:3000/failed");
+            return;
+        }
+
+        String username = jwtUtil.getUsernameFromToken(state);
+        socialAccountService.connectThreadsAccount(code, username);
+        response.sendRedirect("http://localhost:3000/success");
+
     }
 
     @GetMapping("/callback/tiktok")
     public void handleTikTokCallback(
         @RequestParam(name = "code", required = false) String code,
-        @RequestParam(name = "state", required = false) String state, // Thêm state
         @RequestParam(name = "error", required = false) String error,
+        @RequestParam(name = "state", required = false) String state,
         HttpServletResponse response
     ) throws Exception {
         if (error != null) {
@@ -67,10 +101,8 @@ public class SocialAccountController {
         String codeVerifier = SocialAccountService.pkceStorage.remove(state);
         String username = jwtUtil.getUsernameFromToken(state);
 
-        try {
-            socialAccountService.connectTikTokAccount(code, codeVerifier, username);
-            response.sendRedirect("http://localhost:3000/success");
-        } catch (Exception e) {response.sendRedirect("http://localhost:3000/login");
-        }
+
+        socialAccountService.connectTikTokAccount(code, codeVerifier, username);
+        response.sendRedirect("http://localhost:3000/success");
     }
 }
