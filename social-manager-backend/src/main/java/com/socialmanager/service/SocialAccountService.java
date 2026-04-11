@@ -1,5 +1,6 @@
 package com.socialmanager.service;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.socialmanager.dto.SocialAccountDto;
 import com.socialmanager.model.Platform;
 import com.socialmanager.model.SocialAccount;
@@ -20,9 +21,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
@@ -35,37 +34,101 @@ public class SocialAccountService {
     private final JwtUtil jwtUtil;
     public static final Map<String, String> pkceStorage = new ConcurrentHashMap<>();
 
-    private record MetaFacebookPage(
+    private record Picture(
+        PictureData data
+    ) {
+    }
+
+    public record PictureData(
+        String url
+    ) {
+    }
+
+    private record FacebookPage(
+        @JsonProperty("id")
         String id,
+
+        @JsonProperty("name")
         String name,
+
+        @JsonProperty("access_token")
         String pageToken,
+
+        @JsonProperty
+        Picture picture
+    ) {
+        public String pictureUrl() {
+            if (picture == null || picture.data() == null) {
+                return null;
+            }
+            return picture.data().url();
+        }
+    }
+
+    private record FacebookResponse(
+        List<FacebookPage> data
+    ) {
+    }
+
+    private record Instagram(
+        @JsonProperty("id")
+        String id,
+
+        @JsonProperty("username")
+        String username,
+
+        @JsonProperty("name")
+        String name,
+
+        String accessToken,
+
+        @JsonProperty("profile_picture_url")
         String pictureUrl
     ) {
     }
 
-    private record MetaInstagram(
+    private record Threads(
+        @JsonProperty("id")
         String id,
-        String username,
-        String name,
-        String accessToken,
-        String pictureUrl
-    ) {
-    }
 
-    private record MetaThreads(
-        String id,
+        @JsonProperty("username")
         String username,
+
+        @JsonProperty("name")
         String name,
+
         String accessToken,
+
+        @JsonProperty("threads_profile_picture_url")
         String pictureUrl
     ) {
     }
 
     private record TikTok(
+        @JsonProperty("open_id")
         String id,
+
+        @JsonProperty("display_name")
         String name,
+
         String accessToken,
+
+        @JsonProperty("avatar_url")
         String pictureUrl
+    ) {
+    }
+
+    private record TikTokResponse(
+       TikTokData data
+    ) {}
+
+    private record TikTokData(
+        TikTok user
+    ) {}
+
+    private record TokenResponse(
+        @JsonProperty("access_token")
+        String accessToken
     ) {
     }
 
@@ -208,55 +271,34 @@ public class SocialAccountService {
 
     // FACEBOOK
     private String exchangeCodeForFacebookLongToken(String code) {
-
-        // short token
         String shortTokenUrl = "https://graph.facebook.com/oauth/access_token" +
             "?client_id=" + facebookClientId +
             "&client_secret=" + facebookClientSecret +
             "&redirect_uri=" + facebookRedirectUri +
             "&code=" + code;
 
-        Map shortRes = restTemplate.getForObject(shortTokenUrl, Map.class);
+        TokenResponse shortRes = restTemplate.getForObject(shortTokenUrl, TokenResponse.class);
         assert shortRes != null;
-        String shortToken = (String) shortRes.get("access_token");
+        String shortToken = shortRes.accessToken();
 
-        // long token
         String longTokenUrl = "https://graph.facebook.com/v25.0/oauth/access_token" +
             "?grant_type=fb_exchange_token" +
             "&client_id=" + facebookClientId +
             "&client_secret=" + facebookClientSecret +
             "&fb_exchange_token=" + shortToken;
 
-        Map longRes = restTemplate.getForObject(longTokenUrl, Map.class);
-
+        TokenResponse longRes = restTemplate.getForObject(longTokenUrl, TokenResponse.class);
         assert longRes != null;
-        return (String) longRes.get("access_token");
+        return longRes.accessToken();
     }
 
-    private List<MetaFacebookPage> fetchFacebookPages(String userToken) {
+    private List<FacebookPage> fetchFacebookPages(String userToken) {
         String url = "https://graph.facebook.com/v25.0/me/accounts" +
             "?fields=id,name,access_token,picture" +
             "&access_token=" + userToken;
 
-        Map res = restTemplate.getForObject(url, Map.class);
-        List<Map<String, Object>> data = (List<Map<String, Object>>) res.get("data");
-
-        List<MetaFacebookPage> pages = new ArrayList<>();
-
-        for (Map<String, Object> p : data) {
-
-            Map picture = (Map) p.get("picture");
-            Map pictureData = (Map) picture.get("data");
-
-            pages.add(new MetaFacebookPage(
-                (String) p.get("id"),
-                (String) p.get("name"),
-                (String) p.get("access_token"),
-                (String) pictureData.get("url")
-            ));
-        }
-
-        return pages;
+        FacebookResponse res = restTemplate.getForObject(url, FacebookResponse.class);
+        return res != null ? res.data() : List.of();
     }
 
     @Transactional
@@ -265,10 +307,10 @@ public class SocialAccountService {
 
         String longToken = exchangeCodeForFacebookLongToken(code);
 
-        List<MetaFacebookPage> pages = fetchFacebookPages(longToken);
+        List<FacebookPage> pages = fetchFacebookPages(longToken);
         System.out.println("Page list: " + pages);
 
-        for (MetaFacebookPage page : pages) {
+        for (FacebookPage page : pages) {
             saveSocialAccountToDatabase(user, Platform.FACEBOOK, page.id(), page.name(), page.name(), page.pictureUrl(), page.pageToken());
         }
     }
@@ -283,8 +325,8 @@ public class SocialAccountService {
         String shortTokenUrl = "https://api.instagram.com/oauth/access_token";
 
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
-        body.add("client_id", instagramClientId);         // App ID của Instagram
-        body.add("client_secret", instagramClientSecret); // App Secret của Instagram
+        body.add("client_id", instagramClientId);
+        body.add("client_secret", instagramClientSecret);
         body.add("grant_type", "authorization_code");
         body.add("redirect_uri", instagramRedirectUri);
         body.add("code", code);
@@ -293,74 +335,47 @@ public class SocialAccountService {
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
         HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
-        String shortLivedToken;
 
-        try {
-            Map shortTokenRes = restTemplate.postForObject(shortTokenUrl, request, Map.class);
+        TokenResponse shortTokenRes = restTemplate.postForObject(shortTokenUrl, request, TokenResponse.class);
 
-            if (shortTokenRes == null || !shortTokenRes.containsKey("access_token")) {
-                System.err.println("Instagram Short Token Error: " + shortTokenRes);
-                throw new RuntimeException("Failed to get Instagram short-lived token");
-            }
-            shortLivedToken = (String) shortTokenRes.get("access_token");
-
-        } catch (Exception e) {
-            System.err.println("Lỗi gọi API Instagram (1): " + e.getMessage());
-            throw e;
+        if (shortTokenRes == null || shortTokenRes.accessToken() == null) {
+            throw new RuntimeException("Failed to get Instagram short-lived token");
         }
+
+        String shortLivedToken = shortTokenRes.accessToken();
 
         String longTokenUrl = "https://graph.instagram.com/access_token"
             + "?grant_type=ig_exchange_token"
             + "&client_secret=" + instagramClientSecret
             + "&access_token=" + shortLivedToken;
 
-        try {
-            Map longTokenRes = restTemplate.getForObject(longTokenUrl, Map.class);
+        TokenResponse longTokenRes = restTemplate.getForObject(longTokenUrl, TokenResponse.class);
 
-            if (longTokenRes == null || !longTokenRes.containsKey("access_token")) {
-                System.err.println("Instagram Long Token Error: " + longTokenRes);
-                throw new RuntimeException("Failed to get Instagram long-lived token");
-            }
-
-            return (String) longTokenRes.get("access_token");
-
-        } catch (Exception e) {
-            System.err.println("Lỗi gọi API Instagram (2): " + e.getMessage());
-            throw e;
+        if (longTokenRes == null || longTokenRes.accessToken() == null) {
+            throw new RuntimeException("Failed to get Instagram long-lived token");
         }
+
+        return longTokenRes.accessToken();
     }
 
-    private MetaInstagram fetchInstagramAccount(String token) {
+    private Instagram fetchInstagramAccount(String token) {
         String userInfoUrl = "https://graph.instagram.com/v25.0/me"
             + "?fields=id,username,name,profile_picture_url"
             + "&access_token=" + token;
 
-        try {
-            Map response = restTemplate.getForObject(userInfoUrl, Map.class);
-
-            if (response == null || !response.containsKey("id")) {
-                System.err.println("Instagram User Info Error: " + response);
-                throw new RuntimeException("Failed to fetch Instagram user info");
-            }
-
-            String id = (String) response.get("id");
-            String username = (String) response.get("username");
-            String name = response.containsKey("name") ? (String) response.get("name") : username;
-            String pictureUrl = (String) response.get("profile_picture_url");
-
-            return new MetaInstagram(id, username, name, token, pictureUrl);
-
-        } catch (Exception e) {
-            System.err.println("Lỗi gọi API lấy thông tin Instagram: " + e.getMessage());
-            throw e;
+        Instagram response = restTemplate.getForObject(userInfoUrl, Instagram.class);
+        if (response == null || response.id() == null) {
+            throw new RuntimeException("Failed to fetch Instagram user info");
         }
+
+        return new Instagram(response.id(), response.username(), response.name(), token, response.pictureUrl());
     }
 
     @Transactional
     public void connectInstagramAccount(String code, String username) throws Exception {
         User user = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found"));
         String longToken = exchangeCodeForInstagramLongToken(code);
-        MetaInstagram account = fetchInstagramAccount(longToken);
+        Instagram account = fetchInstagramAccount(longToken);
         System.out.println("Instagram account: " + account);
         saveSocialAccountToDatabase(user, Platform.INSTAGRAM, account.id(), account.username(), account.name(), account.pictureUrl(), account.accessToken());
     }
@@ -385,74 +400,47 @@ public class SocialAccountService {
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
         HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
-        String shortLivedToken;
+        TokenResponse shortTokenRes = restTemplate.postForObject(shortTokenUrl, request, TokenResponse.class);
 
-        try {
-            Map shortTokenRes = restTemplate.postForObject(shortTokenUrl, request, Map.class);
-
-            if (shortTokenRes == null || !shortTokenRes.containsKey("access_token")) {
-                System.err.println("Threads Short Token Error: " + shortTokenRes);
-                throw new RuntimeException("Failed to get Threads short-lived token");
-            }
-            shortLivedToken = (String) shortTokenRes.get("access_token");
-
-        } catch (Exception e) {
-            System.err.println("Lỗi gọi API Threads (1): " + e.getMessage());
-            throw e;
+        if (shortTokenRes == null || shortTokenRes.accessToken() == null) {
+            throw new RuntimeException("Failed to get Threads short-lived token");
         }
+        String shortLivedToken = shortTokenRes.accessToken();
 
         String longTokenUrl = "https://graph.threads.net/access_token"
             + "?grant_type=th_exchange_token"
             + "&client_secret=" + threadsClientSecret
             + "&access_token=" + shortLivedToken;
 
-        try {
-            Map longTokenRes = restTemplate.getForObject(longTokenUrl, Map.class);
+        TokenResponse longTokenRes = restTemplate.getForObject(longTokenUrl, TokenResponse.class);
 
-            if (longTokenRes == null || !longTokenRes.containsKey("access_token")) {
-                System.err.println("Threads Long Token Error: " + longTokenRes);
-                throw new RuntimeException("Failed to get Threads long-lived token");
-            }
-
-            return (String) longTokenRes.get("access_token");
-
-        } catch (Exception e) {
-            System.err.println("Lỗi gọi API Threads (2): " + e.getMessage());
-            throw e;
+        if (longTokenRes == null || longTokenRes.accessToken() == null) {
+            throw new RuntimeException("Failed to get Threads long-lived token");
         }
+
+        return longTokenRes.accessToken();
     }
 
-    private MetaThreads fetchThreadsAccount(String token) {
+    private Threads fetchThreadsAccount(String token) {
         String userInfoUrl = "https://graph.threads.net/v1.0/me"
             + "?fields=id,username,name,threads_profile_picture_url"
             + "&access_token=" + token;
 
-        try {
-            Map response = restTemplate.getForObject(userInfoUrl, Map.class);
+        Threads response = restTemplate.getForObject(userInfoUrl, Threads.class);
 
-            if (response == null || !response.containsKey("id")) {
-                System.err.println("Threads User Info Error: " + response);
-                throw new RuntimeException("Failed to fetch Threads user info");
-            }
-
-            String id = (String) response.get("id");
-            String username = (String) response.get("username");
-            String name = response.containsKey("name") ? (String) response.get("name") : username;
-            String pictureUrl = (String) response.get("threads_profile_picture_url");
-
-            return new MetaThreads(id, username, name, token, pictureUrl);
-
-        } catch (Exception e) {
-            System.err.println("Lỗi gọi API lấy thông tin Threads: " + e.getMessage());
-            throw e;
+        if (response == null || response.id() == null) {
+            throw new RuntimeException("Failed to fetch Threads user info");
         }
+
+        return new Threads(response.id(), response.username(), response.name(), token, response.pictureUrl());
+
     }
 
     @Transactional
     public void connectThreadsAccount(String code, String username) throws Exception {
         User user = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found"));
         String longToken = exchangeCodeForThreadsLongToken(code);
-        MetaThreads account = fetchThreadsAccount(longToken);
+        Threads account = fetchThreadsAccount(longToken);
         System.out.println("Threads account: " + account);
         saveSocialAccountToDatabase(user, Platform.THREADS, account.id(), account.username(), account.name(), account.pictureUrl(), account.accessToken());
     }
@@ -460,7 +448,6 @@ public class SocialAccountService {
 
     // TIKTOK
     private String exchangeCodeForTikTokAccessToken(String code, String codeVerifier) {
-        // Endpoint V2 của TikTok
         String tokenUrl = "https://open.tiktokapis.com/v2/oauth/token/";
 
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
@@ -468,25 +455,21 @@ public class SocialAccountService {
         body.add("client_secret", tiktokClientSecret);
         body.add("code", code);
         body.add("grant_type", "authorization_code");
-        body.add("redirect_uri", tiktokRedirectUri); // V2 bắt buộc truyền redirect_uri
+        body.add("redirect_uri", tiktokRedirectUri);
         body.add("code_verifier", codeVerifier);     // V2 bắt buộc truyền code_verifier để verify PKCE
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        // V2 của TikTok yêu cầu Cache-Control: no-cache cho api lấy token
-        headers.setCacheControl(CacheControl.noCache());
+        headers.setCacheControl(CacheControl.noCache()); // V2 yêu cầu Cache-Control: no-cache cho api lấy token
 
         HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
+        TokenResponse response = restTemplate.postForObject(tokenUrl, request, TokenResponse.class);
 
-        Map response = restTemplate.postForObject(tokenUrl, request, Map.class);
-
-        // API V2 trả thẳng access_token ra ngoài, không bọc trong "data" nữa
-        if (response == null || !response.containsKey("access_token")) {
-            System.err.println("TikTok Token Error: " + response);
+        if (response == null || response.accessToken() == null) {
             throw new RuntimeException("Failed to get TikTok access token");
         }
 
-        return (String) response.get("access_token");
+        return response.accessToken();
     }
 
     private TikTok fetchTikTokAccount(String token) {
@@ -496,31 +479,21 @@ public class SocialAccountService {
 
         HttpEntity<Void> request = new HttpEntity<>(headers);
 
-        ResponseEntity<Map> responseEntity = restTemplate.exchange(
+        ResponseEntity<TikTokResponse> response = restTemplate.exchange(
             userInfoUrl,
             HttpMethod.GET,
             request,
-            Map.class
+            TikTokResponse.class
         );
 
-        Map userInfoRes = responseEntity.getBody();
+        TikTokResponse body = response.getBody();
 
-        if (userInfoRes == null || !userInfoRes.containsKey("data")) {
-            System.err.println("TikTok User Info Error: " + userInfoRes);
+        if (body == null || body.data() == null || body.data().user() == null) {
             throw new RuntimeException("Failed to fetch TikTok user info");
         }
 
-        Map<String, Object> data = (Map<String, Object>) userInfoRes.get("data");
-        Map<String, Object> userNode = (Map<String, Object>) data.get("user");
-
-        String openId = (String) userNode.get("open_id");
-        String displayName = (String) userNode.get("display_name");
-        String profileImage = (String) userNode.get("avatar_url");
-
-        System.out.println("TikTok Display name: " + displayName);
-        System.out.println("TikTok Profile Image: " + profileImage);
-
-        return new TikTok(openId, displayName, token, profileImage);
+        TikTok user = body.data().user();
+        return new TikTok(user.id(), user.name(), token, user.pictureUrl());
     }
 
     @Transactional
