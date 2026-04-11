@@ -1,5 +1,6 @@
 package com.socialmanager.controller;
 
+import com.socialmanager.client.TikTokClient;
 import com.socialmanager.dto.ApiResponse;
 import com.socialmanager.dto.SocialAccountDto;
 import com.socialmanager.model.Platform;
@@ -13,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
-
 
 @RestController
 @RequestMapping("/api/social-accounts")
@@ -93,15 +93,14 @@ public class SocialAccountController {
             return;
         }
 
-        // Kiểm tra bảo mật (Xác thực state)
-        if (state == null || !SocialAccountService.pkceStorage.containsKey(state)) {
+        if (state == null || !TikTokClient.pkceStorage.containsKey(state)) {
             // Có dấu hiệu tấn công CSRF hoặc session đã hết hạn
             System.out.println("LỖI: STATE KHÔNG KHỚP HOẶC BỊ NULL!");
             response.sendRedirect("http://localhost:3000/failed");
             return;
         }
 
-        String codeVerifier = SocialAccountService.pkceStorage.remove(state);
+        String codeVerifier = TikTokClient.pkceStorage.remove(state);
         String username = jwtUtil.getUsernameFromToken(state);
 
 
