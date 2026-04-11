@@ -47,7 +47,7 @@ public class QuartzConfig {
         return TriggerBuilder.newTrigger()
             .forJob(tokenRefreshJobDetail())
             .withIdentity("tokenRefreshTrigger", "social-manager")
-            .withSchedule(CronScheduleBuilder.cronSchedule("0/20 * * * * ?"))
+            .withSchedule(CronScheduleBuilder.cronSchedule("0 0 2 * * ?"))
             .build();
     }
 }
