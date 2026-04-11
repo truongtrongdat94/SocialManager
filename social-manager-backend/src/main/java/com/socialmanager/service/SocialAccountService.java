@@ -141,6 +141,15 @@ public class SocialAccountService {
         socialAccountRepository.save(account);
     }
 
+    public SocialAccountDto getSocialAccountByIdAndUsername(UUID id, String username) {
+        UUID userId = userRepository.findByUsername(username).map(User::getId).orElseThrow(() -> new RuntimeException("User not found"));
+
+        SocialAccount account = socialAccountRepository.findByIdAndUserId(id, userId)
+            .orElseThrow(() -> new RuntimeException("Social account not found or access denied"));
+
+        return mapToDto(account);
+    }
+
     public List<SocialAccountDto> getSocialAccountsByUsername(String username) {
         UUID userId = userRepository.findByUsername(username).map(User::getId).orElseThrow(() -> new RuntimeException("User not found"));
 

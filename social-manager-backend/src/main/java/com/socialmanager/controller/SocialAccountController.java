@@ -117,6 +117,19 @@ public class SocialAccountController {
         );
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<SocialAccountDto>> getMySocialAccountById(
+        @PathVariable UUID id,
+        Authentication authentication
+    ) {
+        String username = authentication.getName();
+        return ResponseEntity.ok(
+            ApiResponse.ok(
+                socialAccountService.getSocialAccountByIdAndUsername(id, username)
+            )
+        );
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<String>> deleteSocialAccount(
         @PathVariable UUID id,
