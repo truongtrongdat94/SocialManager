@@ -21,6 +21,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -54,7 +55,7 @@ public class SocialAccountService {
         @JsonProperty("access_token")
         String pageToken,
 
-        @JsonProperty
+        @JsonProperty("picture")
         Picture picture
     ) {
         public String pictureUrl() {
@@ -80,8 +81,6 @@ public class SocialAccountService {
         @JsonProperty("name")
         String name,
 
-        String accessToken,
-
         @JsonProperty("profile_picture_url")
         String pictureUrl
     ) {
@@ -97,8 +96,6 @@ public class SocialAccountService {
         @JsonProperty("name")
         String name,
 
-        String accessToken,
-
         @JsonProperty("threads_profile_picture_url")
         String pictureUrl
     ) {
@@ -111,24 +108,30 @@ public class SocialAccountService {
         @JsonProperty("display_name")
         String name,
 
-        String accessToken,
-
         @JsonProperty("avatar_url")
         String pictureUrl
     ) {
     }
 
     private record TikTokResponse(
-       TikTokData data
-    ) {}
+        TikTokData data
+    ) {
+    }
 
     private record TikTokData(
         TikTok user
-    ) {}
+    ) {
+    }
 
     private record TokenResponse(
         @JsonProperty("access_token")
-        String accessToken
+        String accessToken,
+
+        @JsonProperty("refresh_token")
+        String refreshToken,
+
+        @JsonProperty("expires_in")
+        Integer expiresIn
     ) {
     }
 
@@ -250,7 +253,17 @@ public class SocialAccountService {
         };
     }
 
-    private void saveSocialAccountToDatabase(User user, Platform platform, String externalId, String name, String alias, String pictureUrl, String token) throws Exception {
+    private void saveSocialAccountToDatabase(
+        User user,
+        Platform platform,
+        String externalId,
+        String name,
+        String alias,
+        String pictureUrl,
+        String accessToken,
+        String refreshToken,
+        Integer expiresInSeconds
+    ) throws Exception {
         SocialAccount account = socialAccountRepository
             .findByUserIdAndPlatformAndExternalAccountId(user.getId(), platform, externalId)
             .orElseGet(() -> SocialAccount.builder()
@@ -263,14 +276,21 @@ public class SocialAccountService {
         account.setAccountName(name);
         account.setAccountAlias(alias);
         account.setProfilePictureUrl(pictureUrl);
-        account.setAccessToken(EncryptionUtil.encrypt(token, aesSecret));
+        account.setAccessToken(EncryptionUtil.encrypt(accessToken, aesSecret));
+        account.setRefreshToken(refreshToken != null ? EncryptionUtil.encrypt(refreshToken, aesSecret) : null);
+
+        if (expiresInSeconds != null) {
+            account.setExpiresAt(LocalDateTime.now().plusSeconds(expiresInSeconds));
+        } else {
+            account.setExpiresAt(null);
+        }
 
         socialAccountRepository.save(account);
     }
 
 
     // FACEBOOK
-    private String exchangeCodeForFacebookLongToken(String code) {
+    private TokenResponse exchangeCodeForFacebookLongToken(String code) {
         String shortTokenUrl = "https://graph.facebook.com/oauth/access_token" +
             "?client_id=" + facebookClientId +
             "&client_secret=" + facebookClientSecret +
@@ -289,13 +309,13 @@ public class SocialAccountService {
 
         TokenResponse longRes = restTemplate.getForObject(longTokenUrl, TokenResponse.class);
         assert longRes != null;
-        return longRes.accessToken();
+        return longRes;
     }
 
-    private List<FacebookPage> fetchFacebookPages(String userToken) {
+    private List<FacebookPage> fetchFacebookPages(String longToken) {
         String url = "https://graph.facebook.com/v25.0/me/accounts" +
             "?fields=id,name,access_token,picture" +
-            "&access_token=" + userToken;
+            "&access_token=" + longToken;
 
         FacebookResponse res = restTemplate.getForObject(url, FacebookResponse.class);
         return res != null ? res.data() : List.of();
@@ -305,19 +325,21 @@ public class SocialAccountService {
     public void connectFacebookAccount(String code, String username) throws Exception {
         User user = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found"));
 
-        String longToken = exchangeCodeForFacebookLongToken(code);
+        TokenResponse tokenResponse = exchangeCodeForFacebookLongToken(code);
 
-        List<FacebookPage> pages = fetchFacebookPages(longToken);
+        List<FacebookPage> pages = fetchFacebookPages(tokenResponse.accessToken());
         System.out.println("Page list: " + pages);
 
         for (FacebookPage page : pages) {
-            saveSocialAccountToDatabase(user, Platform.FACEBOOK, page.id(), page.name(), page.name(), page.pictureUrl(), page.pageToken());
+            saveSocialAccountToDatabase(
+                user, Platform.FACEBOOK, page.id(), page.name(), page.name(), page.pictureUrl(), page.pageToken(), null, null
+            );
         }
     }
 
 
     // INSTAGRAM
-    private String exchangeCodeForInstagramLongToken(String code) {
+    private TokenResponse exchangeCodeForInstagramLongToken(String code) {
         if (code.endsWith("#_")) {
             code = code.substring(0, code.length() - 2);
         }
@@ -355,7 +377,7 @@ public class SocialAccountService {
             throw new RuntimeException("Failed to get Instagram long-lived token");
         }
 
-        return longTokenRes.accessToken();
+        return longTokenRes;
     }
 
     private Instagram fetchInstagramAccount(String token) {
@@ -368,21 +390,24 @@ public class SocialAccountService {
             throw new RuntimeException("Failed to fetch Instagram user info");
         }
 
-        return new Instagram(response.id(), response.username(), response.name(), token, response.pictureUrl());
+        return response;
     }
 
     @Transactional
     public void connectInstagramAccount(String code, String username) throws Exception {
         User user = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found"));
-        String longToken = exchangeCodeForInstagramLongToken(code);
-        Instagram account = fetchInstagramAccount(longToken);
+        TokenResponse tokenResponse = exchangeCodeForInstagramLongToken(code);
+        Instagram account = fetchInstagramAccount(tokenResponse.accessToken());
         System.out.println("Instagram account: " + account);
-        saveSocialAccountToDatabase(user, Platform.INSTAGRAM, account.id(), account.username(), account.name(), account.pictureUrl(), account.accessToken());
+        saveSocialAccountToDatabase(
+            user, Platform.INSTAGRAM, account.id(), account.username(), account.name(), account.pictureUrl(),
+            tokenResponse.accessToken(), null, tokenResponse.expiresIn()
+        );
     }
 
 
     // THREADS
-    private String exchangeCodeForThreadsLongToken(String code) {
+    private TokenResponse exchangeCodeForThreadsLongToken(String code) {
         if (code.endsWith("#_")) {
             code = code.substring(0, code.length() - 2);
         }
@@ -418,7 +443,7 @@ public class SocialAccountService {
             throw new RuntimeException("Failed to get Threads long-lived token");
         }
 
-        return longTokenRes.accessToken();
+        return longTokenRes;
     }
 
     private Threads fetchThreadsAccount(String token) {
@@ -432,22 +457,25 @@ public class SocialAccountService {
             throw new RuntimeException("Failed to fetch Threads user info");
         }
 
-        return new Threads(response.id(), response.username(), response.name(), token, response.pictureUrl());
+        return response;
 
     }
 
     @Transactional
     public void connectThreadsAccount(String code, String username) throws Exception {
         User user = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found"));
-        String longToken = exchangeCodeForThreadsLongToken(code);
-        Threads account = fetchThreadsAccount(longToken);
+        TokenResponse tokenResponse = exchangeCodeForThreadsLongToken(code);
+        Threads account = fetchThreadsAccount(tokenResponse.accessToken());
         System.out.println("Threads account: " + account);
-        saveSocialAccountToDatabase(user, Platform.THREADS, account.id(), account.username(), account.name(), account.pictureUrl(), account.accessToken());
+        saveSocialAccountToDatabase(
+            user, Platform.THREADS, account.id(), account.username(), account.name(), account.pictureUrl(),
+            tokenResponse.accessToken(), null, tokenResponse.expiresIn()
+        );
     }
 
 
     // TIKTOK
-    private String exchangeCodeForTikTokAccessToken(String code, String codeVerifier) {
+    private TokenResponse exchangeCodeForTikTokAccessToken(String code, String codeVerifier) {
         String tokenUrl = "https://open.tiktokapis.com/v2/oauth/token/";
 
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
@@ -469,7 +497,7 @@ public class SocialAccountService {
             throw new RuntimeException("Failed to get TikTok access token");
         }
 
-        return response.accessToken();
+        return response;
     }
 
     private TikTok fetchTikTokAccount(String token) {
@@ -492,16 +520,17 @@ public class SocialAccountService {
             throw new RuntimeException("Failed to fetch TikTok user info");
         }
 
-        TikTok user = body.data().user();
-        return new TikTok(user.id(), user.name(), token, user.pictureUrl());
+        return body.data().user();
     }
 
     @Transactional
     public void connectTikTokAccount(String code, String codeVerifier, String username) throws Exception {
         User user = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found"));
-        String accessToken = exchangeCodeForTikTokAccessToken(code, codeVerifier);
-        TikTok account = fetchTikTokAccount(accessToken);
+        TokenResponse tokenResponse = exchangeCodeForTikTokAccessToken(code, codeVerifier);
+        TikTok account = fetchTikTokAccount(tokenResponse.accessToken());
         System.out.println("TikTok account: " + account);
-        saveSocialAccountToDatabase(user, Platform.TIKTOK, account.id(), account.name(), account.name(), account.pictureUrl(), account.accessToken());
+        saveSocialAccountToDatabase(
+            user, Platform.TIKTOK, account.id(), account.name(), account.name(), account.pictureUrl(),
+            tokenResponse.accessToken(), tokenResponse.refreshToken(), tokenResponse.expiresIn());
     }
 }
