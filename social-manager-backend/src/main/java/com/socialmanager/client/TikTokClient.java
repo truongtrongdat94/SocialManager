@@ -103,5 +103,29 @@ public class TikTokClient {
 
         return body.data().user();
     }
+
+    public TokenResponse refreshAccessToken(String currentRefreshToken) {
+        String tokenUrl = "https://open.tiktokapis.com/v2/oauth/token/";
+
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        body.add("client_key", tiktokClientKey);
+        body.add("client_secret", tiktokClientSecret);
+        body.add("grant_type", "refresh_token");
+        body.add("refresh_token", currentRefreshToken);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        headers.setCacheControl(CacheControl.noCache());
+
+        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
+
+        TokenResponse response = restTemplate.postForObject(tokenUrl, request, TokenResponse.class);
+
+        if (response == null || response.accessToken() == null) {
+            throw new RuntimeException("Failed to refresh TikTok access token. Refresh token might be expired.");
+        }
+
+        return response;
+    }
 }
 

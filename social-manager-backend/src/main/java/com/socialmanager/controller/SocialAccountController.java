@@ -61,7 +61,6 @@ public class SocialAccountController {
         String username = jwtUtil.getUsernameFromToken(state);
         socialAccountService.connectInstagramAccount(code, username);
         response.sendRedirect("http://localhost:3000/success");
-
     }
 
     @GetMapping("/callback/threads")
@@ -124,9 +123,7 @@ public class SocialAccountController {
         Authentication authentication
     ) {
         String username = authentication.getName();
-
         socialAccountService.deleteSocialAccountById(id, username);
-
         return ResponseEntity.ok(
             ApiResponse.ok("Social account deleted successfully")
         );

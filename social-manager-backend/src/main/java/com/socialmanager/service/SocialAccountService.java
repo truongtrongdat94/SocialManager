@@ -109,6 +109,37 @@ public class SocialAccountService {
         saveSocialAccountToDatabase(user, Platform.TIKTOK, account.id(), account.name(), account.name(), account.pictureUrl(), tokenResponse.accessToken(), tokenResponse.refreshToken(), tokenResponse.expiresIn());
     }
 
+    @Transactional(rollbackFor = Exception.class)
+    public void refreshAccessToken(UUID accountId) throws Exception {
+        SocialAccount account = socialAccountRepository.findById(accountId).orElseThrow(() -> new RuntimeException("Account not found with ID: " + accountId));
+
+        TokenResponse newTokens = null;
+
+        switch (account.getPlatform()) {
+            case INSTAGRAM -> {
+                String currentAccessToken = EncryptionUtil.decrypt(account.getAccessToken(), aesSecret);
+                newTokens = instagramClient.refreshAccessToken(currentAccessToken);
+            }
+            case THREADS -> {
+                String currentAccessToken = EncryptionUtil.decrypt(account.getAccessToken(), aesSecret);
+                newTokens = threadsClient.refreshAccessToken(currentAccessToken);
+            }
+            case TIKTOK -> {
+                String currentRefreshToken = EncryptionUtil.decrypt(account.getRefreshToken(), aesSecret);
+                newTokens = tikTokClient.refreshAccessToken(currentRefreshToken);
+            }
+        }
+
+        assert newTokens != null;
+        account.setAccessToken(EncryptionUtil.encrypt(newTokens.accessToken(), aesSecret));
+        if (newTokens.refreshToken() != null) {
+            account.setRefreshToken(EncryptionUtil.encrypt(newTokens.refreshToken(), aesSecret));
+        }
+        if (newTokens.expiresIn() != null) {
+            account.setExpiresAt(LocalDateTime.now().plusSeconds(newTokens.expiresIn()));
+        }
+        socialAccountRepository.save(account);
+    }
 
     public List<SocialAccountDto> getSocialAccountsByUsername(String username) {
         UUID userId = userRepository.findByUsername(username).map(User::getId).orElseThrow(() -> new RuntimeException("User not found"));

@@ -97,5 +97,19 @@ public class InstagramClient {
 
         return response;
     }
+
+    public TokenResponse refreshAccessToken(String currentAccessToken) {
+        String url = "https://graph.instagram.com/refresh_access_token" +
+            "?grant_type=ig_refresh_token" +
+            "&access_token=" + currentAccessToken;
+
+        TokenResponse response = restTemplate.getForObject(url, TokenResponse.class);
+
+        if (response == null || response.accessToken() == null) {
+            throw new RuntimeException("Failed to refresh Instagram access token. Token might be invalid or expired.");
+        }
+
+        return response;
+    }
 }
 
