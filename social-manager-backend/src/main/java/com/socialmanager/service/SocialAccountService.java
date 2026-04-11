@@ -533,4 +533,31 @@ public class SocialAccountService {
             user, Platform.TIKTOK, account.id(), account.name(), account.name(), account.pictureUrl(),
             tokenResponse.accessToken(), tokenResponse.refreshToken(), tokenResponse.expiresIn());
     }
+
+    // CRUD
+    public List<SocialAccountDto> getSocialAccountsByUsername(String username) {
+        UUID userId = userRepository.findByUsername(username)
+            .map(User::getId)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+        List<SocialAccount> accounts = socialAccountRepository.findByUserId(userId);
+
+        return accounts.stream()
+            .map(this::mapToDto)
+            .toList();
+    }
+
+    public void deleteSocialAccountById(UUID id, String username) {
+        User user = userRepository.findByUsername(username)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+        SocialAccount account = socialAccountRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Social account not found"));
+
+        if (!account.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("You are not allowed to delete this account");
+        }
+
+        socialAccountRepository.delete(account);
+    }
 }

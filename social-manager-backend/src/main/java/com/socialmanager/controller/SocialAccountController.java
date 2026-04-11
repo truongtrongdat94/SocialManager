@@ -1,6 +1,7 @@
 package com.socialmanager.controller;
 
 import com.socialmanager.dto.ApiResponse;
+import com.socialmanager.dto.SocialAccountDto;
 import com.socialmanager.model.Platform;
 import com.socialmanager.service.SocialAccountService;
 import com.socialmanager.util.JwtUtil;
@@ -9,6 +10,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.UUID;
 
 
 @RestController
@@ -75,7 +79,6 @@ public class SocialAccountController {
         String username = jwtUtil.getUsernameFromToken(state);
         socialAccountService.connectThreadsAccount(code, username);
         response.sendRedirect("http://localhost:3000/success");
-
     }
 
     @GetMapping("/callback/tiktok")
@@ -93,7 +96,7 @@ public class SocialAccountController {
         // Kiểm tra bảo mật (Xác thực state)
         if (state == null || !SocialAccountService.pkceStorage.containsKey(state)) {
             // Có dấu hiệu tấn công CSRF hoặc session đã hết hạn
-            System.out.println(">>> LỖI: STATE KHÔNG KHỚP HOẶC BỊ NULL! <<<");
+            System.out.println("LỖI: STATE KHÔNG KHỚP HOẶC BỊ NULL!");
             response.sendRedirect("http://localhost:3000/failed");
             return;
         }
@@ -104,5 +107,29 @@ public class SocialAccountController {
 
         socialAccountService.connectTikTokAccount(code, codeVerifier, username);
         response.sendRedirect("http://localhost:3000/success");
+    }
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<SocialAccountDto>>> getMySocialAccounts(Authentication authentication) {
+        String username = authentication.getName();
+        return ResponseEntity.ok(
+            ApiResponse.ok(
+                socialAccountService.getSocialAccountsByUsername(username)
+            )
+        );
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<String>> deleteSocialAccount(
+        @PathVariable UUID id,
+        Authentication authentication
+    ) {
+        String username = authentication.getName();
+
+        socialAccountService.deleteSocialAccountById(id, username);
+
+        return ResponseEntity.ok(
+            ApiResponse.ok("Social account deleted successfully")
+        );
     }
 }
