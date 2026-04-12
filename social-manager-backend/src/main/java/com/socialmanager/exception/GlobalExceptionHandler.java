@@ -29,6 +29,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleAll(Exception ex) {
+        // QUAN TRỌNG: Thêm dòng này để nhìn thấy lỗi thật trong VS Code Terminal
+        ex.printStackTrace(); 
+        
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error("Internal server error: " + ex.getMessage()));
     }
