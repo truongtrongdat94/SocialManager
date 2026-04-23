@@ -5,12 +5,14 @@ import com.socialmanager.dto.*;
 import com.socialmanager.dto.external.*;
 import com.socialmanager.dto.external.FacebookResponse.Page;
 import com.socialmanager.dto.external.TikTokResponse.TikTok;
+import com.socialmanager.exception.ResourceNotFoundException;
 import com.socialmanager.model.*;
 import com.socialmanager.repository.*;
 import com.socialmanager.util.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -69,8 +71,9 @@ public class SocialAccountService {
     }
 
     @Transactional
-    public void connectFacebookAccount(String code, String username) throws Exception {
-        User user = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found"));
+    public void connectFacebookAccount(String code, String username) {
+        User user = userRepository.findByUsername(username)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
 
         TokenResponse tokenResponse = facebookClient.exchangeCodeForFacebookLongToken(code);
 
@@ -78,80 +81,113 @@ public class SocialAccountService {
         System.out.println("Page list: " + pages);
 
         for (Page page : pages) {
-            saveSocialAccountToDatabase(user, Platform.FACEBOOK, page.id(), page.name(), page.name(), page.pictureUrl(), page.pageToken(), null, null);
+            try {
+                saveSocialAccountToDatabase(user, Platform.FACEBOOK, page.id(), page.name(), page.name(), page.pictureUrl(), page.pageToken(), null, null);
+            } catch (Exception e) {
+                throw new RuntimeException("Lỗi khi mã hóa và lưu DB", e);
+            }
         }
     }
 
     @Transactional
-    public void connectInstagramAccount(String code, String username) throws Exception {
-        User user = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found"));
+    public void connectInstagramAccount(String code, String username) {
+        User user = userRepository.findByUsername(username)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
         TokenResponse tokenResponse = instagramClient.exchangeCodeForInstagramLongToken(code);
         InstagramResponse account = instagramClient.fetchInstagramAccount(tokenResponse.accessToken());
         System.out.println("Instagram account: " + account);
-        saveSocialAccountToDatabase(user, Platform.INSTAGRAM, account.id(), account.username(), account.name(), account.pictureUrl(), tokenResponse.accessToken(), null, tokenResponse.expiresIn());
+        try {
+            saveSocialAccountToDatabase(user, Platform.INSTAGRAM, account.id(), account.username(), account.name(), account.pictureUrl(), tokenResponse.accessToken(), null, tokenResponse.expiresIn());
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi khi mã hóa và lưu DB", e);
+        }
     }
 
     @Transactional
-    public void connectThreadsAccount(String code, String username) throws Exception {
-        User user = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found"));
+    public void connectThreadsAccount(String code, String username) {
+        User user = userRepository.findByUsername(username)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
         TokenResponse tokenResponse = threadsClient.exchangeCodeForThreadsLongToken(code);
         ThreadsResponse account = threadsClient.fetchThreadsAccount(tokenResponse.accessToken());
         System.out.println("Threads account: " + account);
-        saveSocialAccountToDatabase(user, Platform.THREADS, account.id(), account.username(), account.name(), account.pictureUrl(), tokenResponse.accessToken(), null, tokenResponse.expiresIn());
+        try {
+            saveSocialAccountToDatabase(user, Platform.THREADS, account.id(), account.username(), account.name(), account.pictureUrl(), tokenResponse.accessToken(), null, tokenResponse.expiresIn());
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi khi mã hóa và lưu DB", e);
+        }
     }
 
     @Transactional
-    public void connectTikTokAccount(String code, String codeVerifier, String username) throws Exception {
-        User user = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found"));
+    public void connectTikTokAccount(String code, String codeVerifier, String username) {
+        User user = userRepository.findByUsername(username)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
         TokenResponse tokenResponse = tikTokClient.exchangeCodeForTikTokAccessToken(code, codeVerifier);
         TikTok account = tikTokClient.fetchTikTokAccount(tokenResponse.accessToken());
         System.out.println("TikTok account: " + account);
-        saveSocialAccountToDatabase(user, Platform.TIKTOK, account.id(), account.name(), account.name(), account.pictureUrl(), tokenResponse.accessToken(), tokenResponse.refreshToken(), tokenResponse.expiresIn());
+        try {
+            saveSocialAccountToDatabase(user, Platform.TIKTOK, account.id(), account.name(), account.name(), account.pictureUrl(), tokenResponse.accessToken(), tokenResponse.refreshToken(), tokenResponse.expiresIn());
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi khi mã hóa và lưu DB", e);
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void refreshAccessToken(UUID accountId) throws Exception {
-        SocialAccount account = socialAccountRepository.findById(accountId).orElseThrow(() -> new RuntimeException("Account not found with ID: " + accountId));
+        SocialAccount account = socialAccountRepository.findById(accountId)
+            .orElseThrow(() -> new ResourceNotFoundException("Account not found with ID: " + accountId));
 
         TokenResponse newTokens = null;
 
-        switch (account.getPlatform()) {
-            case INSTAGRAM -> {
-                String currentAccessToken = EncryptionUtil.decrypt(account.getAccessToken(), aesSecret);
-                newTokens = instagramClient.refreshAccessToken(currentAccessToken);
+        try {
+            switch (account.getPlatform()) {
+                case INSTAGRAM -> {
+                    String currentAccessToken = EncryptionUtil.decrypt(account.getAccessToken(), aesSecret);
+                    newTokens = instagramClient.refreshAccessToken(currentAccessToken);
+                }
+                case THREADS -> {
+                    String currentAccessToken = EncryptionUtil.decrypt(account.getAccessToken(), aesSecret);
+                    newTokens = threadsClient.refreshAccessToken(currentAccessToken);
+                }
+                case TIKTOK -> {
+                    String currentRefreshToken = EncryptionUtil.decrypt(account.getRefreshToken(), aesSecret);
+                    newTokens = tikTokClient.refreshAccessToken(currentRefreshToken);
+                }
+                case FACEBOOK -> {
+                    return;
+                }
             }
-            case THREADS -> {
-                String currentAccessToken = EncryptionUtil.decrypt(account.getAccessToken(), aesSecret);
-                newTokens = threadsClient.refreshAccessToken(currentAccessToken);
+
+            if (newTokens == null) {
+                throw new RuntimeException("Không thể làm mới token từ nền tảng");
             }
-            case TIKTOK -> {
-                String currentRefreshToken = EncryptionUtil.decrypt(account.getRefreshToken(), aesSecret);
-                newTokens = tikTokClient.refreshAccessToken(currentRefreshToken);
+
+            account.setAccessToken(EncryptionUtil.encrypt(newTokens.accessToken(), aesSecret));
+            if (newTokens.refreshToken() != null) {
+                account.setRefreshToken(EncryptionUtil.encrypt(newTokens.refreshToken(), aesSecret));
             }
+            if (newTokens.expiresIn() != null) {
+                account.setExpiresAt(LocalDateTime.now().plusSeconds(newTokens.expiresIn()));
+            }
+            socialAccountRepository.save(account);
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi giải mã/mã hóa khi refresh token", e);
         }
 
-        assert newTokens != null;
-        account.setAccessToken(EncryptionUtil.encrypt(newTokens.accessToken(), aesSecret));
-        if (newTokens.refreshToken() != null) {
-            account.setRefreshToken(EncryptionUtil.encrypt(newTokens.refreshToken(), aesSecret));
-        }
-        if (newTokens.expiresIn() != null) {
-            account.setExpiresAt(LocalDateTime.now().plusSeconds(newTokens.expiresIn()));
-        }
-        socialAccountRepository.save(account);
+
     }
 
     public SocialAccountDto getSocialAccountByIdAndUsername(UUID id, String username) {
-        UUID userId = userRepository.findByUsername(username).map(User::getId).orElseThrow(() -> new RuntimeException("User not found"));
+        UUID userId = userRepository.findByUsername(username).map(User::getId)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         SocialAccount account = socialAccountRepository.findByIdAndUserId(id, userId)
-            .orElseThrow(() -> new RuntimeException("Social account not found or access denied"));
+            .orElseThrow(() -> new ResourceNotFoundException("Social account not found or access denied"));
 
         return mapToDto(account);
     }
 
     public List<SocialAccountDto> getSocialAccountsByUsername(String username) {
-        UUID userId = userRepository.findByUsername(username).map(User::getId).orElseThrow(() -> new RuntimeException("User not found"));
+        UUID userId = userRepository.findByUsername(username).map(User::getId).orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         List<SocialAccount> accounts = socialAccountRepository.findByUserId(userId);
 
@@ -159,13 +195,14 @@ public class SocialAccountService {
     }
 
     public void deleteSocialAccountById(UUID id, String username) {
-        User user = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.findByUsername(username).orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        SocialAccount account = socialAccountRepository.findById(id).orElseThrow(() -> new RuntimeException("Social account not found"));
+        SocialAccount account = socialAccountRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Social account not found"));
 
         if (!account.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("You are not allowed to delete this account");
+            throw new AccessDeniedException("Bạn không có quyền xóa tài khoản mạng xã hội này");
         }
+
 
         socialAccountRepository.delete(account);
     }
