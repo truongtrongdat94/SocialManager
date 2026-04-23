@@ -10,6 +10,7 @@ import com.socialmanager.service.SocialAccountService;
 import com.socialmanager.util.JwtUtil;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +23,9 @@ import java.util.UUID;
 @RequestMapping("/api/social-accounts")
 @RequiredArgsConstructor
 public class SocialAccountController {
+    @Value("${FRONTEND_URL}")
+    private String frontendUrl;
+
     private final JwtUtil jwtUtil;
     private final SocialAccountService socialAccountService;
 
@@ -43,7 +47,7 @@ public class SocialAccountController {
 
         String username = jwtUtil.getUsernameFromToken(state);
         socialAccountService.connectFacebookAccount(code, username);
-        response.sendRedirect("http://localhost:3000/success");
+        response.sendRedirect(frontendUrl + "/success");
     }
 
     @GetMapping("/callback/instagram")
@@ -57,7 +61,7 @@ public class SocialAccountController {
 
         String username = jwtUtil.getUsernameFromToken(state);
         socialAccountService.connectInstagramAccount(code, username);
-        response.sendRedirect("http://localhost:3000/success");
+        response.sendRedirect(frontendUrl + "/success");
     }
 
     @GetMapping("/callback/threads")
@@ -71,7 +75,7 @@ public class SocialAccountController {
 
         String username = jwtUtil.getUsernameFromToken(state);
         socialAccountService.connectThreadsAccount(code, username);
-        response.sendRedirect("http://localhost:3000/success");
+        response.sendRedirect(frontendUrl + "/success");
     }
 
     @GetMapping("/callback/tiktok")
@@ -91,7 +95,7 @@ public class SocialAccountController {
         String username = jwtUtil.getUsernameFromToken(state);
 
         socialAccountService.connectTikTokAccount(code, codeVerifier, username);
-        response.sendRedirect("http://localhost:3000/success");
+        response.sendRedirect(frontendUrl + "/success");
     }
 
     @GetMapping

@@ -16,6 +16,9 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @Value("${FRONTEND_URL}")
+    private String frontendUrl;
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleNotFound(ResourceNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -45,7 +48,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({OAuthCallbackException.class, CsrfSecurityException.class})
     public void handleOAuthErrors(RuntimeException ex, HttpServletResponse response) throws IOException {
-        response.sendRedirect("http://localhost:3000/failed");
+        response.sendRedirect(frontendUrl + "/failed");
     }
 
     @ExceptionHandler(AccessDeniedException.class)
