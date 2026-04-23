@@ -46,6 +46,18 @@ public class ThreadsClient {
         );
     }
 
+    private String getLongTokenUrl(TokenResponse shortTokenRes) {
+        if (shortTokenRes == null || shortTokenRes.accessToken() == null) {
+            throw new ExternalApiCallException("Không thể lấy short token từ Threads (Phản hồi rỗng)");
+        }
+        String shortLivedToken = shortTokenRes.accessToken();
+
+        return "https://graph.threads.net/access_token"
+            + "?grant_type=th_exchange_token"
+            + "&client_secret=" + threadsClientSecret
+            + "&access_token=" + shortLivedToken;
+    }
+
     public TokenResponse exchangeCodeForThreadsLongToken(String code) {
         if (code.endsWith("#_")) {
             code = code.substring(0, code.length() - 2);
@@ -67,15 +79,7 @@ public class ThreadsClient {
             HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
             TokenResponse shortTokenRes = restTemplate.postForObject(shortTokenUrl, request, TokenResponse.class);
 
-            if (shortTokenRes == null || shortTokenRes.accessToken() == null) {
-                throw new ExternalApiCallException("Không thể lấy short token từ Threads (Phản hồi rỗng)");
-            }
-            String shortLivedToken = shortTokenRes.accessToken();
-
-            String longTokenUrl = "https://graph.threads.net/access_token"
-                + "?grant_type=th_exchange_token"
-                + "&client_secret=" + threadsClientSecret
-                + "&access_token=" + shortLivedToken;
+            String longTokenUrl = getLongTokenUrl(shortTokenRes);
 
             TokenResponse longTokenRes = restTemplate.getForObject(longTokenUrl, TokenResponse.class);
 

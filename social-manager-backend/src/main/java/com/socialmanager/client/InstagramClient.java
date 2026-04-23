@@ -4,6 +4,7 @@ import com.socialmanager.dto.external.*;
 import com.socialmanager.exception.ExternalApiCallException;
 import com.socialmanager.service.*;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -46,6 +47,19 @@ public class InstagramClient {
         );
     }
 
+    private String getLongTokenUrl(TokenResponse shortTokenRes) {
+        if (shortTokenRes == null || shortTokenRes.accessToken() == null) {
+            throw new ExternalApiCallException("Không thể lấy short token từ Instagram (Phản hồi rỗng)");
+        }
+
+        String shortLivedToken = shortTokenRes.accessToken();
+
+        return "https://graph.instagram.com/access_token"
+            + "?grant_type=ig_exchange_token"
+            + "&client_secret=" + instagramClientSecret
+            + "&access_token=" + shortLivedToken;
+    }
+
     public TokenResponse exchangeCodeForInstagramLongToken(String code) {
         if (code.endsWith("#_")) {
             code = code.substring(0, code.length() - 2);
@@ -68,16 +82,7 @@ public class InstagramClient {
 
             TokenResponse shortTokenRes = restTemplate.postForObject(shortTokenUrl, request, TokenResponse.class);
 
-            if (shortTokenRes == null || shortTokenRes.accessToken() == null) {
-                throw new ExternalApiCallException("Không thể lấy short token từ Instagram (Phản hồi rỗng)");
-            }
-
-            String shortLivedToken = shortTokenRes.accessToken();
-
-            String longTokenUrl = "https://graph.instagram.com/access_token"
-                + "?grant_type=ig_exchange_token"
-                + "&client_secret=" + instagramClientSecret
-                + "&access_token=" + shortLivedToken;
+            String longTokenUrl = getLongTokenUrl(shortTokenRes);
 
             TokenResponse longTokenRes = restTemplate.getForObject(longTokenUrl, TokenResponse.class);
 

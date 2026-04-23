@@ -41,6 +41,19 @@ public class FacebookClient {
         );
     }
 
+    private String getLongTokenUrl(TokenResponse shortRes) {
+        if (shortRes == null || shortRes.accessToken() == null) {
+            throw new ExternalApiCallException("Không thể lấy short token từ Facebook");
+        }
+        String shortToken = shortRes.accessToken();
+
+        return "https://graph.facebook.com/v25.0/oauth/access_token" +
+            "?grant_type=fb_exchange_token" +
+            "&client_id=" + facebookClientId +
+            "&client_secret=" + facebookClientSecret +
+            "&fb_exchange_token=" + shortToken;
+    }
+
     public TokenResponse exchangeCodeForFacebookLongToken(String code) {
         try {
             String shortTokenUrl = "https://graph.facebook.com/oauth/access_token" +
@@ -50,16 +63,7 @@ public class FacebookClient {
                 "&code=" + code;
 
             TokenResponse shortRes = restTemplate.getForObject(shortTokenUrl, TokenResponse.class);
-            if (shortRes == null || shortRes.accessToken() == null) {
-                throw new ExternalApiCallException("Không thể lấy short token từ Facebook");
-            }
-            String shortToken = shortRes.accessToken();
-
-            String longTokenUrl = "https://graph.facebook.com/v25.0/oauth/access_token" +
-                "?grant_type=fb_exchange_token" +
-                "&client_id=" + facebookClientId +
-                "&client_secret=" + facebookClientSecret +
-                "&fb_exchange_token=" + shortToken;
+            String longTokenUrl = getLongTokenUrl(shortRes);
 
             TokenResponse longRes = restTemplate.getForObject(longTokenUrl, TokenResponse.class);
             if (longRes == null) {
