@@ -132,7 +132,7 @@ public class SocialAccountService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void refreshAccessToken(UUID accountId) throws Exception {
+    public void refreshAccessToken(UUID accountId) {
         SocialAccount account = socialAccountRepository.findById(accountId)
             .orElseThrow(() -> new ResourceNotFoundException("Account not found with ID: " + accountId));
 
