@@ -1,24 +1,24 @@
 package com.socialmanager.service;
 
-import com.socialmanager.model.ImageGeneration;
-import com.socialmanager.model.User;
-import com.socialmanager.repository.ImageGenerationRepository;
-import com.socialmanager.repository.UserRepository; // 1. Thêm import này
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpEntity; // 1. Thêm import này
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID; // 2. Thêm import này
+import com.socialmanager.model.ImageGeneration;
+import com.socialmanager.model.User;
+import com.socialmanager.repository.ImageGenerationRepository;
+import com.socialmanager.repository.UserRepository;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
@@ -36,23 +36,18 @@ public class GeminiAIService {
     private final UserRepository userRepository; // Thêm repository này vào để tìm User
     private final RestTemplate restTemplate = new RestTemplate();
 
-    public ImageGeneration createCaption(String topic, String platform, User dummyUser) {
-        log.info("Tiến đang xử lý sinh caption cho: {} trên {}", topic, platform);
-
-        // 4. Tìm đúng ông User Admin bạn đã tạo trong pgAdmin
-        UUID adminId = UUID.fromString("0617107c-4f5f-4be0-a29d-7d49198de289");
-        User realUser = userRepository.findById(adminId)
-                .orElseThrow(() -> new RuntimeException("Lỗi: Bạn chưa tạo user mồi trong pgAdmin rồi Tiến ơi!"));
+    public ImageGeneration createCaption(String topic, String platform, User currentUser) {
+        log.info("Đang xử lý sinh caption cho User ID: {} với chủ đề: {}", currentUser.getId(), topic);
 
         // Gọi API Gemini để lấy nội dung
         String caption = callGeminiApi(topic, platform);
 
-        // 5. Gán realUser (ông Admin có email xịn) vào đây
+        // Gán currentUser (User đang đăng nhập) vào entity
         ImageGeneration generation = ImageGeneration.builder()
-                .user(realUser) 
+                .user(currentUser) 
                 .prompt(topic)
                 .caption(caption)
-                .status("COMPLETED")
+                .status("COMPLETED") // Tùy luồng của bạn
                 .build();
 
         return repository.save(generation);

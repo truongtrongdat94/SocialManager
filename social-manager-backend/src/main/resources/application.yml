@@ -27,15 +27,15 @@ app:
     expiration: ${JWT_EXPIRATION:86400000}
   aes-secret: ${AES_SECRET:dev-aes-key-32-bytes-1234567890}
   gemini:
-    api-key: ${GEMINI_API_KEY}
+    api-key: "AIzaSyAGwJmOn-CqIHECTM8gwi4XVA5Ek_HYrCM"
     url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent"  
   leonardo:
-    api-key: ${LEONARDO_API_KEY}
+    api-key: "a58e94d9-a355-44e8-becd-545a1bc82042"
     url: "https://cloud.leonardo.ai/api/rest/v1/generations"   
   cloudinary:
-    cloud-name: ${CLOUDINARY_CLOUD_NAME}
-    api-key: ${CLOUDINARY_API_KEY}
-    api-secret: ${CLOUDINARY_API_SECRET}
+    cloud-name: "dogiiqqpy"
+    api-key: "357955796644895"
+    api-secret: "ltxZ1U5c5ssRtuktWXzoDhpnLWw"
   meta:
     app-id: ${META_APP_ID:}
     app-secret: ${META_APP_SECRET:}

@@ -4,14 +4,16 @@ import com.socialmanager.dto.ApiResponse;
 import com.socialmanager.dto.request.CaptionRequest;
 import com.socialmanager.model.ImageGeneration;
 import com.socialmanager.model.User;
+import com.socialmanager.repository.UserRepository; // Import thêm cái này
 import com.socialmanager.service.GeminiAIService;
 import com.socialmanager.service.ImageGenService; 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder; // Import Security
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map; // Phải có cái này để dùng được Map
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/ai")
@@ -19,16 +21,31 @@ import java.util.Map; // Phải có cái này để dùng được Map
 public class AIController {
 
     private final GeminiAIService geminiAIService;
-    private final ImageGenService imageGenService; // Inject Service sinh ảnh vào đây
+    private final ImageGenService imageGenService;
+    private final UserRepository userRepository; // Inject thêm UserRepository để tìm DB
+
+    /**
+     * Hàm dùng chung để bắt thông tin User đang gọi API từ JWT Token
+     */
+    private User getCurrentAuthenticatedUser() {
+        // Lấy Email (hoặc Username) được giấu trong Token lúc user gửi request
+        String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        
+        // Móc vào Database lấy đúng ông User đó ra
+        return userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new RuntimeException("Lỗi Auth: Không tìm thấy User đang đăng nhập trong Database!"));
+    }
 
     @PostMapping("/generate-caption")
     public ResponseEntity<ApiResponse<ImageGeneration>> generate(@Valid @RequestBody CaptionRequest request) {
-        User mockUser = new User(); 
+        // 1. Lấy User xịn từ Token
+        User currentUser = getCurrentAuthenticatedUser(); 
         
+        // 2. Truyền User xịn vào Service thay vì mockUser
         ImageGeneration result = geminiAIService.createCaption(
             request.getTopic(), 
             request.getPlatform(), 
-            mockUser
+            currentUser
         );
 
         return ResponseEntity.ok(new ApiResponse<>(true, "Đã sinh nội dung AI thành công", result));
@@ -36,17 +53,20 @@ public class AIController {
 
     @GetMapping("/history")
     public ResponseEntity<?> getHistory() {
+        // (Tùy chọn: Sau này bạn có thể sửa hàm getAllHistory trong Service 
+        // thành getHistoryByUser(getCurrentAuthenticatedUser()) để user nào chỉ thấy lịch sử của người đó)
         return ResponseEntity.ok(geminiAIService.getAllHistory());
     }
 
-    // Endpoint sinh ảnh - Giữ đúng logic lấy ID từ Leonardo
     @PostMapping("/generate-image")
     public ResponseEntity<?> generateImage(@RequestBody Map<String, String> request) {
         String prompt = request.get("prompt");
+        
+        // 1. Lấy User xịn từ Token
+        User currentUser = getCurrentAuthenticatedUser(); 
     
-        // Gọi thẳng sang Service, Service sẽ lo từ A-Z (gọi Leonardo + lưu DB)
-        // Chú ý: Chữ 'null' ở đây là đại diện cho User. Nếu đã có chức năng lấy User đang đăng nhập, hãy thay null bằng object User đó.
-        com.socialmanager.model.ImageGeneration imgGen = imageGenService.startImageGeneration(prompt, null);
+        // 2. Thay chữ 'null' bằng currentUser
+        ImageGeneration imgGen = imageGenService.startImageGeneration(prompt, currentUser);
     
         if (imgGen != null) {
             return ResponseEntity.ok(Map.of(
