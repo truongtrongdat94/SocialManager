@@ -21,7 +21,14 @@ public class QuartzConfig {
     @Bean
     public SchedulerFactoryBean schedulerFactoryBean(DataSource dataSource, Trigger tokenRefreshJobTrigger, JobDetail tokenRefreshJobDetail) {
         SchedulerFactoryBean factory = new SchedulerFactoryBean();
-        factory.setDataSource(dataSource);
+        // In local profile we keep Quartz in-memory to avoid requiring external DB infra.
+        boolean localProfileActive = Arrays.asList(environment.getActiveProfiles()).contains("local");
+        if (!localProfileActive) {
+            factory.setDataSource(dataSource);
+        }
+        factory.setJobDetails(autoPostJobDetail);
+        factory.setTriggers(autoPostTrigger);
+        factory.setJobFactory(springBeanJobFactory());
         factory.setApplicationContextSchedulerContextKey("applicationContext");
         factory.setWaitForJobsToCompleteOnShutdown(true);
         factory.setOverwriteExistingJobs(true);

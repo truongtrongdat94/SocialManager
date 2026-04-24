@@ -1,0 +1,42 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:localdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+    open-in-view: false
+  quartz:
+    job-store-type: memory
+    jdbc:
+      initialize-schema: never
+
+app:
+  auth:
+    username: devuser
+    password: devpass123
+  posting:
+    cron: 0/10 * * * * ?
+  jwt:
+    secret: dev-secret-key-at-least-64-characters-long-for-local-development-only
+    expiration: 86400000
+  aes-secret: 12345678901234567890123456789012
+  gemini:
+    api-key: test
+  leonardo:
+    api-key: test
+  cloudinary:
+    cloud-name: test
+    api-key: test
+    api-secret: test
+  meta:
+    app-id: test
+    app-secret: test
+    redirect-uri: http://localhost/test
+  tiktok:
+    client-key: test
+    client-secret: test
+    redirect-uri: http://localhost/test

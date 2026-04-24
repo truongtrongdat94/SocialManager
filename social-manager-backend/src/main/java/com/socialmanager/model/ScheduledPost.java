@@ -50,6 +50,13 @@ public class ScheduledPost {
     private String errorMessage;
 
     @Builder.Default
+    @Column(name = "retry_count", nullable = false)
+    private Integer retryCount = 0;
+
+    @Column(name = "last_attempt_at")
+    private LocalDateTime lastAttemptAt;
+
+    @Builder.Default
     @Column(name = "is_auto_pilot")
     private Boolean isAutoPilot = false;
 
