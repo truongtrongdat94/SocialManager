@@ -1,37 +1,28 @@
-import axios from 'axios'
+import axios from "axios";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080',
-})
+    baseURL: import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api",
+});
 
-const getAuthHeader = () => {
-  const token = localStorage.getItem('token')
-  if (token) {
-    return `Bearer ${token}`
-  }
-
-  return null
-}
-
-// Attach the current auth header to every request
+// Attach JWT token to every request
 api.interceptors.request.use((config) => {
-  const authHeader = getAuthHeader()
-  if (authHeader) {
-    config.headers.Authorization = authHeader
-  }
-  return config
-})
+    const token = localStorage.getItem("token");
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
 
 // Redirect to login on 401
 api.interceptors.response.use(
-  (res) => res,
-  (err) => {
-    if (err.response?.status === 401 && !String(err.config?.url ?? '').includes('/api/auth/login')) {
-      localStorage.removeItem('token')
-      window.location.href = '/login'
-    }
-    return Promise.reject(err)
-  },
-)
+    (res) => res,
+    (err) => {
+        if (err.response?.status === 401) {
+            localStorage.removeItem("token");
+            window.location.href = "/login";
+        }
+        return Promise.reject(err);
+    },
+);
 
-export default api
+export default api;

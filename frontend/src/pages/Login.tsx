@@ -1,59 +1,90 @@
-import { FormEvent, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import api from '../api/axios'
+import api from "../api/axios";
+import { useState, useEffect } from "react";
 
 export default function Login() {
-  const navigate = useNavigate()
-  const [username, setUsername] = useState('devuser')
-  const [password, setPassword] = useState('devpass123')
-  const [error, setError] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    setIsSubmitting(true)
-
-    try {
-      const response = await api.post('/api/auth/login', { username, password })
-      localStorage.setItem('token', response.data.token)
-      localStorage.setItem('username', response.data.username)
-      setError('')
-      navigate('/dashboard')
-    } catch (requestError) {
-      setError('Invalid username or password')
-    } finally {
-      setIsSubmitting(false)
+    enum Platform {
+        FACEBOOK = "FACEBOOK",
+        INSTAGRAM = "INSTAGRAM",
+        THREADS = "THREADS",
+        TIKTOK = "TIKTOK",
     }
-  }
 
-  return (
-    <div className="auth-shell">
-      <form className="auth-card" onSubmit={handleSubmit}>
-        <p className="eyebrow">Social Manager</p>
-        <h1>Sign in</h1>
-        <p className="muted">Use your local dev credentials to enter the dashboard.</p>
+    const [form, setForm] = useState({ username: "", password: "" });
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-        <label>
-          Username
-          <input value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" />
-        </label>
+    const login = async () => {
+        const res = await api.post("/auth/login", form);
+        const token = res.data.data.token;
 
-        <label>
-          Password
-          <input
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            autoComplete="current-password"
-          />
-        </label>
+        localStorage.setItem("token", token);
+        api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 
-        {error ? <p className="error-text">{error}</p> : null}
+        setIsLoggedIn(true)
+        alert("Logged in!");
+    };
 
-        <button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Signing in...' : 'Continue'}
-        </button>
-      </form>
-    </div>
-  )
+    const handleLogin = async (platform: Platform) => {
+        try {
+            const res = await api.get(`/social-accounts/connect/${platform}`);
+            window.location.href = res.data.data;
+        } catch (err) {
+            console.error(err);
+            alert("Login failed");
+        }
+    };
+
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+        if (token) {
+            setIsLoggedIn(true);
+
+            // set lại header (quan trọng nếu reload page)
+            api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+        }
+    }, []);
+
+    return (
+        <div style={{ padding: "2rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            <h1>Login</h1>
+
+            <div>
+
+            </div>
+
+            <input
+                style={{width: "fit-content"}}
+                placeholder="username"
+                value={form.username}
+                onChange={(e) => setForm({ ...form, username: e.target.value })}
+            />
+
+            <input
+                style={{width: "fit-content"}}
+                placeholder="password"
+                type="password"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+            />
+
+            <button style={{width: "fit-content"}} onClick={login}>Login</button>
+
+            {isLoggedIn && (
+                <div style={{marginTop: "1rem", display: "flex", flexDirection: "column", gap: "0.5rem"}}>
+                    <h2>CONNECT SOCIAL</h2>
+                    <button style={{width: "fit-content"}} onClick={() => handleLogin(Platform.FACEBOOK)}>
+                        Connect Facebook
+                    </button>
+                    <button style={{width: "fit-content"}} onClick={() => handleLogin(Platform.INSTAGRAM)}>
+                        Connect Instagram
+                    </button>
+                    <button style={{width: "fit-content"}} onClick={() => handleLogin(Platform.THREADS)}>
+                        Connect Threads
+                    </button>
+                    <button style={{width: "fit-content"}} onClick={() => handleLogin(Platform.TIKTOK)}>
+                        Connect TikTok
+                    </button>
+                </div>
+            )}
+        </div>
+    );
 }

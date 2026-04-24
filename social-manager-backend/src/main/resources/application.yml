@@ -1,6 +1,8 @@
 spring:
   application:
     name: social-manager-backend
+  config:
+    import: optional:file:.env.properties
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
   datasource:
@@ -19,7 +21,12 @@ spring:
   quartz:
     job-store-type: jdbc
     jdbc:
-      initialize-schema: ${QUARTZ_INIT_SCHEMA:never}
+      initialize-schema: always
+    properties:
+      org:
+        quartz:
+          jobStore:
+            driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
 
 app:
   auth:

@@ -1,41 +1,40 @@
 package com.socialmanager.controller;
 
+import com.socialmanager.dto.ApiResponse;
+import com.socialmanager.dto.AuthResponse;
 import com.socialmanager.dto.LoginRequest;
-import com.socialmanager.dto.LoginResponse;
-import com.socialmanager.util.JwtUtil;
+import com.socialmanager.dto.RegisterRequest;
+import com.socialmanager.dto.UserDto;
+import com.socialmanager.service.AuthService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
+@RequiredArgsConstructor
 public class AuthController {
 
-    private final JwtUtil jwtUtil;
-    private final String expectedUsername;
-    private final String expectedPassword;
+    private final AuthService authService;
 
-    public AuthController(JwtUtil jwtUtil,
-                          @Value("${app.auth.username}") String expectedUsername,
-                          @Value("${app.auth.password}") String expectedPassword) {
-        this.jwtUtil = jwtUtil;
-        this.expectedUsername = expectedUsername;
-        this.expectedPassword = expectedPassword;
+    @PostMapping("/register")
+    public ResponseEntity<ApiResponse<UserDto>> register(@Valid @RequestBody RegisterRequest request) {
+        UserDto userDto = authService.register(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(userDto));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-        if (!expectedUsername.equals(request.getUsername()) || !expectedPassword.equals(request.getPassword())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid username or password");
-        }
+    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
+        String token = authService.login(request);
+        return ResponseEntity.ok(ApiResponse.ok(new AuthResponse(token)));
+    }
 
-        String token = jwtUtil.generateToken(request.getUsername());
-        return ResponseEntity.ok(new LoginResponse(token, request.getUsername()));
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<UserDto>> me(Authentication authentication) {
+        UserDto userDto = authService.getCurrentUser(authentication.getName());
+        return ResponseEntity.ok(ApiResponse.ok(userDto));
     }
 }
