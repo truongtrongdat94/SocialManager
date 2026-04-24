@@ -1,9 +1,11 @@
 package com.socialmanager.controller;
 
 import java.util.Map;
+import java.util.List;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping; // Import thêm cái này
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,6 +22,7 @@ import com.socialmanager.service.ImageGenService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 @RestController
 @RequestMapping("/api/ai")
@@ -58,11 +61,19 @@ public class AIController {
     }
 
     @GetMapping("/history")
-    public ResponseEntity<?> getHistory() {
-        // (Tùy chọn: Sau này bạn có thể sửa hàm getAllHistory trong Service 
-        // thành getHistoryByUser(getCurrentAuthenticatedUser()) để user nào chỉ thấy lịch sử của người đó)
-        return ResponseEntity.ok(geminiAIService.getAllHistory());
-    }
+    public ResponseEntity<?> getHistory(@AuthenticationPrincipal UserDetails userDetails) {
+        // 1. Tìm thực thể User đầy đủ từ username trong Token
+        User currentUser = userRepository.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // 2. Gọi hàm Service mới để lấy đúng đồ của mình
+        List<ImageGeneration> history = geminiAIService.getHistoryForUser(currentUser);
+
+        return ResponseEntity.ok(Map.of(
+          "success", true,
+          "data", history
+    ));
+}
 
     @PostMapping("/generate-image")
     public ResponseEntity<?> generateImage(@RequestBody Map<String, String> request) {

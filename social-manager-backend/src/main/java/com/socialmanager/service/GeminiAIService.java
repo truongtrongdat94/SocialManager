@@ -103,7 +103,11 @@ public class GeminiAIService {
         return "Lỗi xử lý nội dung từ Gemini 3.";
     }
     }
-    public List<ImageGeneration> getAllHistory() {
-    return repository.findAllByOrderByCreatedAtDesc();
+    public List<ImageGeneration> getHistoryForUser(User currentUser) {
+        log.info(">>>> Đang truy xuất lịch sử cho User: {} (ID: {})", 
+             currentUser.getUsername(), currentUser.getId());
+             
+    // Sử dụng hàm có sẵn trong repository để lọc theo ID
+        return repository.findByUserId(currentUser.getId());
     }
 }
