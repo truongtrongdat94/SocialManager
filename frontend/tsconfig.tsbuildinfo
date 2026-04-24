@@ -1,5 +1,0 @@
-<<<<<<< HEAD
-{"root":["./src/app.tsx","./src/main.tsx","./src/api/axios.ts","./src/api/vite-env.d.ts","./src/pages/dashboard.tsx","./src/pages/failed.tsx","./src/pages/login.tsx","./src/pages/success.tsx"],"version":"5.9.3"}
-=======
-{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/api/axios.ts","./src/pages/dashboard.tsx","./src/pages/login.tsx","./src/pages/posts.tsx"],"version":"5.9.3"}
->>>>>>> b7630e295a34f77ed8c25c4c9888f9636371f5b8
