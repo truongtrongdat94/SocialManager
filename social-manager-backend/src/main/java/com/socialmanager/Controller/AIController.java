@@ -1,19 +1,25 @@
 package com.socialmanager.controller;
 
+import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping; // Import thêm cái này
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.socialmanager.dto.ApiResponse;
 import com.socialmanager.dto.request.CaptionRequest;
-import com.socialmanager.model.ImageGeneration;
+import com.socialmanager.model.ImageGeneration; // Import Security
 import com.socialmanager.model.User;
-import com.socialmanager.repository.UserRepository; // Import thêm cái này
+import com.socialmanager.repository.UserRepository;
 import com.socialmanager.service.GeminiAIService;
 import com.socialmanager.service.ImageGenService; 
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder; // Import Security
-import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/ai")
@@ -28,12 +34,12 @@ public class AIController {
      * Hàm dùng chung để bắt thông tin User đang gọi API từ JWT Token
      */
     private User getCurrentAuthenticatedUser() {
-        // Lấy Email (hoặc Username) được giấu trong Token lúc user gửi request
-        String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        // Cái getName() này hiện tại do module Auth quyết định, khả năng cao nó đang trả về Username
+        String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
         
-        // Móc vào Database lấy đúng ông User đó ra
-        return userRepository.findByEmail(currentUserEmail)
-                .orElseThrow(() -> new RuntimeException("Lỗi Auth: Không tìm thấy User đang đăng nhập trong Database!"));
+        // SỬA Ở ĐÂY: Đổi findByEmail thành findByUsername
+        return userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new RuntimeException("Lỗi Auth: Không tìm thấy User có username là [" + currentUsername + "] trong Database!"));
     }
 
     @PostMapping("/generate-caption")
