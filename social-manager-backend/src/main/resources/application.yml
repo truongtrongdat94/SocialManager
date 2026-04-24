@@ -19,13 +19,23 @@ spring:
   quartz:
     job-store-type: jdbc
     jdbc:
-      initialize-schema: always
+      initialize-schema: ${QUARTZ_INIT_SCHEMA:never}
 
 app:
+  auth:
+    username: ${AUTH_USERNAME:devuser}
+    password: ${AUTH_PASSWORD:devpass123}
+  posting:
+    cron: ${POSTING_CRON:0 */1 * * * ?}
+    batch-size: ${POSTING_BATCH_SIZE:50}
+    max-job-attempts: ${POSTING_MAX_JOB_ATTEMPTS:3}
+    daily-quota: ${POSTING_DAILY_QUOTA:5}
+    max-retries: ${POSTING_MAX_RETRIES:3}
+    retry-backoff-ms: ${POSTING_RETRY_BACKOFF_MS:1000}
   jwt:
     secret: ${JWT_SECRET:dev-secret-key-at-least-64-characters-long-for-local-development-only}
     expiration: ${JWT_EXPIRATION:86400000}
-  aes-secret: ${AES_SECRET:dev-aes-key-32-bytes-1234567890}
+  aes-secret: ${AES_SECRET:12345678901234567890123456789012}
   gemini:
     api-key: ${GEMINI_API_KEY:}
   leonardo:
