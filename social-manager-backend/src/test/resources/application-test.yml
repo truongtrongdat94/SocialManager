@@ -1,9 +1,12 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
     driver-class-name: org.h2.Driver
     username: sa
     password:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.quartz.autoconfigure.QuartzAutoConfiguration
   jpa:
     database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
@@ -35,3 +38,17 @@ app:
     client-key: test
     client-secret: test
     redirect-uri: http://localhost/test
+
+AES_SECRET: test-aes-key-12345678901234
+TIKTOK_CLIENT_KEY: test
+TIKTOK_CLIENT_SECRET: test
+TIKTOK_REDIRECT_URI: http://localhost/test
+THREADS_CLIENT_ID: test
+THREADS_CLIENT_SECRET: test
+THREADS_REDIRECT_URI: http://localhost/test
+FACEBOOK_CLIENT_ID: test
+FACEBOOK_CLIENT_SECRET: test
+FACEBOOK_REDIRECT_URI: http://localhost/test
+INSTAGRAM_CLIENT_ID: test
+INSTAGRAM_CLIENT_SECRET: test
+INSTAGRAM_REDIRECT_URI: http://localhost/test

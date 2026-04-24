@@ -33,6 +33,6 @@ public class AccountDailyInsight {
     private Integer impressions;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb")
+    @Column
     private String metadata;
 }

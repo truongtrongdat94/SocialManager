@@ -32,7 +32,7 @@ public class ScheduledPost {
     // TEXT[] in PostgreSQL
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Array(length = 10)
-    @Column(name = "media_urls", columnDefinition = "TEXT[]")
+    @Column(name = "media_urls")
     private String[] mediaUrls;
 
     @Column(name = "scheduled_time")

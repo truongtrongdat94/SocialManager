@@ -56,7 +56,7 @@ class JwtAuthFilterTest {
         userRepository.deleteAllInBatch();
         String safe = sanitize(username, 3, 20);
 
-        User user = User.builder().username(safe).password("hashed").name("Test").build();
+        User user = User.builder().email(safe + "@test.local").username(safe).password("hashed").name("Test").build();
         userRepository.save(user);
 
         String token = jwtUtil.generateToken(safe);
@@ -100,7 +100,7 @@ class JwtAuthFilterTest {
         String safe = sanitize(base, 3, 15);
 
         // Test with username subject (local user)
-        User localUser = User.builder().username(safe).password("hashed").name("Local").build();
+        User localUser = User.builder().email(safe + "@test.local").username(safe).password("hashed").name("Local").build();
         userRepository.save(localUser);
         String usernameToken = jwtUtil.generateToken(safe);
 

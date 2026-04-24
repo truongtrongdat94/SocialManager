@@ -82,6 +82,28 @@ Frontend chạy tại: http://localhost:3000
 
 ---
 
+## Kiểm thử
+
+### Backend tests
+
+```bash
+cd social-manager-backend
+.\mvnw test
+```
+
+Lệnh này chạy toàn bộ bộ test Java với profile `test`.
+
+### Frontend build check
+
+```bash
+cd frontend
+npm run build
+```
+
+Lệnh này kiểm tra TypeScript và build production của frontend.
+
+---
+
 ## Cấu trúc project
 
 ```
