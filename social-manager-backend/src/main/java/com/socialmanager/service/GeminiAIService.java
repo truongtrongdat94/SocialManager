@@ -1,5 +1,6 @@
 package com.socialmanager.service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
+import com.socialmanager.model.AiGenerationLog;
 import com.socialmanager.model.ImageGeneration;
 import com.socialmanager.model.User;
 import com.socialmanager.repository.ImageGenerationRepository;
@@ -19,6 +21,7 @@ import com.socialmanager.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.socialmanager.repository.AiGenerationLogRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -35,22 +38,19 @@ public class GeminiAIService {
     private final ImageGenerationRepository repository;
     private final UserRepository userRepository; // Thêm repository này vào để tìm User
     private final RestTemplate restTemplate = new RestTemplate();
+    private final AiGenerationLogRepository aiGenerationLogRepository;
 
-    public ImageGeneration createCaption(String topic, String platform, User currentUser) {
-        log.info("Đang xử lý sinh caption cho User ID: {} với chủ đề: {}", currentUser.getId(), topic);
-
-        // Gọi API Gemini để lấy nội dung
+    public AiGenerationLog createCaption(String topic, String platform, User currentUser) {
         String caption = callGeminiApi(topic, platform);
 
-        // Gán currentUser (User đang đăng nhập) vào entity
-        ImageGeneration generation = ImageGeneration.builder()
+        // Tạo object theo model AiGenerationLog
+       AiGenerationLog generation = AiGenerationLog.builder()
                 .user(currentUser) 
                 .prompt(topic)
-                .caption(caption)
-                .status("COMPLETED") // Tùy luồng của bạn
-                .build();
+                .resultCaption(caption) 
+            .build();
 
-        return repository.save(generation);
+        return aiGenerationLogRepository.save(generation);
     }
 
     // Các hàm callGeminiApi và extractText giữ nguyên như cũ...

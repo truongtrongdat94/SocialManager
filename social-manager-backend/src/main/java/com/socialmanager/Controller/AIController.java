@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.socialmanager.dto.ApiResponse;
 import com.socialmanager.dto.request.CaptionRequest;
+import com.socialmanager.model.AiGenerationLog;
 import com.socialmanager.model.ImageGeneration; // Import Security
 import com.socialmanager.model.User;
 import com.socialmanager.repository.UserRepository;
@@ -46,12 +47,10 @@ public class AIController {
     }
 
     @PostMapping("/generate-caption")
-    public ResponseEntity<ApiResponse<ImageGeneration>> generate(@Valid @RequestBody CaptionRequest request) {
-        // 1. Lấy User xịn từ Token
+    public ResponseEntity<ApiResponse<AiGenerationLog>> generate(@Valid @RequestBody CaptionRequest request) {
         User currentUser = getCurrentAuthenticatedUser(); 
-        
-        // 2. Truyền User xịn vào Service thay vì mockUser
-        ImageGeneration result = geminiAIService.createCaption(
+    
+        AiGenerationLog result = geminiAIService.createCaption(
             request.getTopic(), 
             request.getPlatform(), 
             currentUser
