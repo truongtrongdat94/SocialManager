@@ -1,4 +1,4 @@
-package com.socialmanager.service;
+package com.socialmanager.service.account;
 
 import com.socialmanager.client.*;
 import com.socialmanager.dto.*;
@@ -10,7 +10,6 @@ import com.socialmanager.repository.*;
 import com.socialmanager.util.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,9 +29,9 @@ public class SocialAccountService {
     private final ThreadsClient threadsClient;
     private final TikTokClient tikTokClient;
 
-    private final JwtUtil jwtUtil;
+    private final com.socialmanager.util.JwtUtil jwtUtil;
 
-    @Value("${AES_SECRET}")
+    @Value("${app.aes-secret}")
     private String aesSecret;
 
     private SocialAccountDto mapToDto(SocialAccount account) {

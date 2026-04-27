@@ -2,6 +2,7 @@ package com.socialmanager.service;
 
 import com.socialmanager.exception.BusinessException;
 import com.socialmanager.model.Platform;
+import com.socialmanager.service.utils.MediaPreparationService;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

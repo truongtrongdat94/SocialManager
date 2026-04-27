@@ -1,4 +1,4 @@
-package com.socialmanager.service;
+package com.socialmanager.dto;
 
 public record SocialPostPublishRequest(
         String platform,

@@ -1,5 +1,6 @@
-package com.socialmanager.service;
+package com.socialmanager.service.post;
 
+import com.socialmanager.dto.SocialPostPublishRequest;
 import com.socialmanager.model.Platform;
 
 public interface SocialPostPublisher {

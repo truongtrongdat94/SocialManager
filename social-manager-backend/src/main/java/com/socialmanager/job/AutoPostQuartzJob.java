@@ -3,13 +3,13 @@ package com.socialmanager.job;
 import com.socialmanager.model.ScheduledPost;
 import com.socialmanager.model.SocialAccount;
 import com.socialmanager.repository.ScheduledPostRepository;
-import com.socialmanager.service.MediaPreparationService;
-import com.socialmanager.service.PlatformApiService; // Assume this handles FB/TikTok posting
-import com.socialmanager.service.TokenCryptoService;
-import lombok.RequiredArgsConstructor;
+import com.socialmanager.service.post.PlatformApiService; // Assume this handles FB/TikTok posting
+import com.socialmanager.service.utils.MediaPreparationService;
+import com.socialmanager.service.utils.TokenCryptoService;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
@@ -20,7 +20,6 @@ import java.util.UUID;
 import java.util.logging.Logger;
 
 @Component
-@RequiredArgsConstructor
 @DisallowConcurrentExecution
 public class AutoPostQuartzJob implements Job {
 
@@ -31,10 +30,17 @@ public class AutoPostQuartzJob implements Job {
     private static final String STATUS_PUBLISHED = "POSTED";
     private static final String STATUS_FAILED = "FAILED";
 
-    private final ScheduledPostRepository postRepository;
-    private final PlatformApiService platformApiService;
-    private final MediaPreparationService mediaPreparationService;
-    private final TokenCryptoService tokenCryptoService;
+    @Autowired
+    private ScheduledPostRepository postRepository;
+
+    @Autowired
+    private PlatformApiService platformApiService;
+
+    @Autowired
+    private MediaPreparationService mediaPreparationService;
+
+    @Autowired
+    private TokenCryptoService tokenCryptoService;
 
     @Value("${app.posting.batch-size:50}")
     private int batchSize;

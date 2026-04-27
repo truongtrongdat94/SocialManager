@@ -2,6 +2,8 @@ package com.socialmanager.service;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import com.socialmanager.dto.SocialPostPublishRequest;
+import com.socialmanager.service.post.MetaSocialPostPublisher;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -36,7 +38,7 @@ class MetaSocialPostPublisherTest {
         List<String> capturedIdempotencyKeys = new ArrayList<>();
 
         server = HttpServer.create(new InetSocketAddress(0), 0);
-        server.createContext("/123/feed", exchange -> handleMetaExchange(exchange, callCount, capturedBodies, capturedIdempotencyKeys));
+        server.createContext("/123/photos", exchange -> handleMetaExchange(exchange, callCount, capturedBodies, capturedIdempotencyKeys));
         server.start();
 
         MetaSocialPostPublisher publisher = new MetaSocialPostPublisher(
@@ -58,8 +60,8 @@ class MetaSocialPostPublisherTest {
         assertEquals(2, callCount.get());
         assertEquals(2, capturedBodies.size());
         assertEquals("post-abc", capturedIdempotencyKeys.get(0));
-        assertTrue(capturedBodies.get(0).contains("seo caption"));
-        assertTrue(capturedBodies.get(0).contains("image.png"));
+        assertTrue(capturedBodies.get(0).contains("\"caption\":\"seo caption\""));
+        assertTrue(capturedBodies.get(0).contains("\"url\":\"https://cdn.example.com/image.png\""));
     }
 
     private void handleMetaExchange(HttpExchange exchange, AtomicInteger callCount,

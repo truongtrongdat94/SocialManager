@@ -1,16 +1,17 @@
 package com.socialmanager.controller;
 
 import com.socialmanager.dto.ApiResponse;
+import com.socialmanager.dto.AiPostComposeRequest;
+import com.socialmanager.dto.AiPostComposeResponse;
+import com.socialmanager.dto.AiPostSourcesResponse;
 import com.socialmanager.dto.PagedHistoryResponse;
 import com.socialmanager.dto.PostHistoryFilter;
 import com.socialmanager.dto.PostHistoryItem;
 import com.socialmanager.dto.ReschedulePostRequest;
 import com.socialmanager.dto.ScheduledPostRequest;
 import com.socialmanager.dto.ScheduledPostResponse;
-import com.socialmanager.model.ScheduledPost;
-import com.socialmanager.repository.ScheduledPostRepository;
-import com.socialmanager.service.CurrentUserService;
-import com.socialmanager.service.PostService;
+import com.socialmanager.service.post.AiPostComposeService;
+import com.socialmanager.service.post.PostService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -18,11 +19,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/posts")
@@ -30,55 +29,42 @@ import java.util.stream.Collectors;
 public class PostController {
 
     private final PostService postService;
-    private final ScheduledPostRepository scheduledPostRepository;
-    private final CurrentUserService currentUserService;
+    private final AiPostComposeService aiPostComposeService;
 
     @PostMapping("/preview")
-    public ResponseEntity<ScheduledPostResponse> previewPost(@Valid @RequestBody ScheduledPostRequest request) {
-        return ResponseEntity.ok(postService.preview(request));
+    public ResponseEntity<ApiResponse<ScheduledPostResponse>> previewPost(@Valid @RequestBody ScheduledPostRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(postService.preview(request)));
     }
 
     @PostMapping("/schedule")
-    public ResponseEntity<ScheduledPostResponse> schedulePost(@Valid @RequestBody ScheduledPostRequest request) {
+    public ResponseEntity<ApiResponse<ScheduledPostResponse>> schedulePost(@Valid @RequestBody ScheduledPostRequest request) {
         ScheduledPostResponse response = postService.createScheduledPost(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(response));
+    }
+
+    @PostMapping("/ai/preview")
+    public ResponseEntity<ApiResponse<AiPostComposeResponse>> previewFromAi(@Valid @RequestBody AiPostComposeRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(aiPostComposeService.preview(request)));
+    }
+
+    @PostMapping("/ai/schedule")
+    public ResponseEntity<ApiResponse<AiPostComposeResponse>> scheduleFromAi(@Valid @RequestBody AiPostComposeRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(aiPostComposeService.schedule(request)));
+    }
+
+    @GetMapping("/ai/sources")
+    public ResponseEntity<ApiResponse<AiPostSourcesResponse>> listAiSources(@RequestParam(defaultValue = "20") int limit) {
+        return ResponseEntity.ok(ApiResponse.ok(aiPostComposeService.listSources(limit)));
     }
 
     @GetMapping("/monitor/summary")
     public ResponseEntity<Map<String, Long>> monitorSummary() {
-        UUID userId = currentUserService.getCurrentUser().getId();
-        Map<String, Long> summary;
-        try {
-            summary = Map.of(
-                    "pending", scheduledPostRepository.countByUser_IdAndStatus(userId, "PENDING"),
-                    "processing", scheduledPostRepository.countByUser_IdAndStatus(userId, "PROCESSING"),
-                    "posted", scheduledPostRepository.countByUser_IdAndStatus(userId, "POSTED"),
-                    "failed", scheduledPostRepository.countByUser_IdAndStatus(userId, "FAILED")
-            );
-        } catch (Exception ex) {
-            summary = Map.of(
-                    "pending", 0L,
-                    "processing", 0L,
-                    "posted", 0L,
-                    "failed", 0L
-            );
-        }
-        return ResponseEntity.ok(summary);
+        return ResponseEntity.ok(postService.getMonitorSummaryForCurrentUser());
     }
 
     @GetMapping("/monitor/recent")
     public ResponseEntity<List<Map<String, Object>>> monitorRecent() {
-        UUID userId = currentUserService.getCurrentUser().getId();
-        List<Map<String, Object>> items;
-        try {
-            items = scheduledPostRepository.findTop20ByUser_IdOrderByCreatedAtDesc(userId)
-                    .stream()
-                    .map(this::toMonitorItem)
-                    .toList();
-        } catch (Exception ex) {
-            items = List.of();
-        }
-        return ResponseEntity.ok(items);
+        return ResponseEntity.ok(postService.getRecentMonitorItemsForCurrentUser());
     }
 
     @GetMapping("/history")
@@ -129,26 +115,6 @@ public class PostController {
         return ResponseEntity.ok(ApiResponse.ok(postService.reschedulePost(postId, request.scheduledTime())));
     }
 
-    private Map<String, Object> toMonitorItem(ScheduledPost post) {
-        return Map.of(
-                "id", post.getId() != null ? post.getId().toString() : "",
-                "status", safe(post.getStatus()),
-                "retryCount", post.getRetryCount() == null ? 0 : post.getRetryCount(),
-                "scheduledTime", toIso(post.getScheduledTime()),
-                "lastAttemptAt", toIso(post.getLastAttemptAt()),
-                "publishedPostId", safe(post.getPublishedPostId()),
-                "errorMessage", safe(post.getErrorMessage())
-        );
-    }
-
-    private String safe(String value) {
-        return value == null ? "" : value;
-    }
-
-    private String toIso(LocalDateTime value) {
-        return value == null ? "" : value.toString();
-    }
-
     private boolean matchesFilter(PostHistoryItem item, PostHistoryFilter filter) {
         if (filter.status() != null && !filter.status().equalsIgnoreCase(item.status())) {
             return false;
@@ -183,6 +149,10 @@ public class PostController {
         }
 
         return true;
+    }
+
+    private String safe(String value) {
+        return value == null ? "" : value;
     }
 
     private String normalize(String value) {

@@ -1,7 +1,8 @@
-package com.socialmanager.service;
+package com.socialmanager.service.post;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.socialmanager.dto.SocialPostPublishRequest;
 import com.socialmanager.exception.BusinessException;
 import com.socialmanager.model.Platform;
 
@@ -51,6 +52,14 @@ abstract class AbstractHttpSocialPostPublisher implements SocialPostPublisher {
             JsonNode idNode = root.path("id");
             if (!idNode.isMissingNode() && !idNode.asText().isBlank()) {
                 return idNode.asText();
+            }
+            JsonNode publishIdNode = root.path("data").path("publish_id");
+            if (!publishIdNode.isMissingNode() && !publishIdNode.asText().isBlank()) {
+                return publishIdNode.asText();
+            }
+            JsonNode postIdNode = root.path("data").path("post_id");
+            if (!postIdNode.isMissingNode() && !postIdNode.asText().isBlank()) {
+                return postIdNode.asText();
             }
             JsonNode dataIdNode = root.path("data").path("id");
             if (!dataIdNode.isMissingNode() && !dataIdNode.asText().isBlank()) {

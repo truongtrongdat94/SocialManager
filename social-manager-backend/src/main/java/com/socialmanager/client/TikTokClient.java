@@ -44,7 +44,7 @@ public class TikTokClient {
                 "&client_key=%s" +
                 "&redirect_uri=%s" +
                 "&response_type=code" +
-                "&scope=user.info.basic" +
+                "&scope=user.info.basic,video.publish" +
                 "&state=%s" +
                 "&code_challenge=%s" +
                 "&code_challenge_method=S256",

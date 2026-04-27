@@ -4,7 +4,7 @@ import com.socialmanager.client.TikTokClient;
 import com.socialmanager.dto.ApiResponse;
 import com.socialmanager.dto.SocialAccountDto;
 import com.socialmanager.model.Platform;
-import com.socialmanager.service.SocialAccountService;
+import com.socialmanager.service.account.SocialAccountService;
 import com.socialmanager.util.JwtUtil;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;

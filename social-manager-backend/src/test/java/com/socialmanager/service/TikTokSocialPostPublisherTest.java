@@ -2,6 +2,8 @@ package com.socialmanager.service;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import com.socialmanager.dto.SocialPostPublishRequest;
+import com.socialmanager.service.post.TikTokSocialPostPublisher;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -32,9 +34,9 @@ class TikTokSocialPostPublisherTest {
         AtomicReference<String> bodyRef = new AtomicReference<>();
 
         server = HttpServer.create(new InetSocketAddress(0), 0);
-        server.createContext("/v2/post/publish", exchange -> {
+        server.createContext("/v2/post/publish/video/init/", exchange -> {
             bodyRef.set(readBody(exchange.getRequestBody()));
-            sendResponse(exchange, 200, "{\"data\":{\"id\":\"tiktok-post-9\"}}");
+            sendResponse(exchange, 200, "{\"data\":{\"publish_id\":\"tiktok-post-9\"}}");
         });
         server.start();
 
@@ -54,8 +56,9 @@ class TikTokSocialPostPublisherTest {
         ));
 
         assertEquals("tiktok-post-9", result);
-        assertTrue(bodyRef.get().contains("\"account_id\":\"acct-9\""));
-        assertTrue(bodyRef.get().contains("\"caption\":\"short caption\""));
+        assertTrue(bodyRef.get().contains("\"post_info\""));
+        assertTrue(bodyRef.get().contains("\"source_info\""));
+        assertTrue(bodyRef.get().contains("\"video_url\":\"https://cdn.example.com/video.mp4\""));
     }
 
     private String readBody(InputStream inputStream) throws IOException {

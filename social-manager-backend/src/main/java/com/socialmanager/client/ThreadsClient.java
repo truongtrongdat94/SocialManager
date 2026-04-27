@@ -1,7 +1,6 @@
 package com.socialmanager.client;
 
 import com.socialmanager.dto.external.*;
-import com.socialmanager.service.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;

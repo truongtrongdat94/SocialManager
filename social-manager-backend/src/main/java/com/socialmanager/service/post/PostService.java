@@ -1,4 +1,4 @@
-package com.socialmanager.service;
+package com.socialmanager.service.post;
 
 import com.socialmanager.dto.ScheduledPostRequest;
 import com.socialmanager.dto.ScheduledPostResponse;
@@ -7,6 +7,8 @@ import com.socialmanager.model.ScheduledPost;
 import com.socialmanager.model.SocialAccount;
 import com.socialmanager.repository.ScheduledPostRepository;
 import com.socialmanager.repository.SocialAccountRepository;
+import com.socialmanager.service.account.CurrentUserService;
+import com.socialmanager.service.utils.TokenCryptoService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,6 +20,7 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -40,7 +43,7 @@ public class PostService {
     @Transactional
     public ScheduledPostResponse createScheduledPost(ScheduledPostRequest request) {
         UUID socialAccountId = parseUuid(request.getSocialAccountId(), "socialAccountId");
-        SocialAccount account = socialAccountRepository.findByIdAndUser_Id(socialAccountId, currentUserService.getCurrentUser().getId())
+        SocialAccount account = socialAccountRepository.findByIdAndUserId(socialAccountId, currentUserService.getCurrentUser().getId())
                 .orElseThrow(() -> new BusinessException("Social Account not found"));
 
         // Quota Check
@@ -64,7 +67,7 @@ public class PostService {
     // 2. Preview (Generates a preview object without saving)
     public ScheduledPostResponse preview(ScheduledPostRequest request) {
         UUID socialAccountId = parseUuid(request.getSocialAccountId(), "socialAccountId");
-        SocialAccount account = socialAccountRepository.findByIdAndUser_Id(socialAccountId, currentUserService.getCurrentUser().getId())
+        SocialAccount account = socialAccountRepository.findByIdAndUserId(socialAccountId, currentUserService.getCurrentUser().getId())
                 .orElseThrow(() -> new BusinessException("Social Account not found"));
         
         ScheduledPost mockPost = new ScheduledPost();
@@ -138,6 +141,26 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
+    public Map<String, Long> getMonitorSummaryForCurrentUser() {
+        UUID userId = currentUserService.getCurrentUser().getId();
+        return Map.of(
+                "pending", postRepository.countByUser_IdAndStatus(userId, "PENDING"),
+                "processing", postRepository.countByUser_IdAndStatus(userId, "PROCESSING"),
+                "posted", postRepository.countByUser_IdAndStatus(userId, "POSTED"),
+                "failed", postRepository.countByUser_IdAndStatus(userId, "FAILED")
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getRecentMonitorItemsForCurrentUser() {
+        UUID userId = currentUserService.getCurrentUser().getId();
+        return postRepository.findTop20ByUser_IdOrderByCreatedAtDesc(userId)
+                .stream()
+                .map(this::toMonitorItem)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<ScheduledPost> findHistoryForCurrentUser() {
         return postRepository.findByUser_IdOrderByCreatedAtDesc(currentUserService.getCurrentUser().getId());
     }
@@ -191,5 +214,25 @@ public class PostService {
         } catch (Exception ex) {
             throw new BusinessException(fieldName + " must be a valid UUID");
         }
+    }
+
+    private Map<String, Object> toMonitorItem(ScheduledPost post) {
+        return Map.of(
+                "id", post.getId() != null ? post.getId().toString() : "",
+                "status", safe(post.getStatus()),
+                "retryCount", post.getRetryCount() == null ? 0 : post.getRetryCount(),
+                "scheduledTime", toIso(post.getScheduledTime()),
+                "lastAttemptAt", toIso(post.getLastAttemptAt()),
+                "publishedPostId", safe(post.getPublishedPostId()),
+                "errorMessage", safe(post.getErrorMessage())
+        );
+    }
+
+    private String safe(String value) {
+        return value == null ? "" : value;
+    }
+
+    private String toIso(LocalDateTime value) {
+        return value == null ? "" : value.toString();
     }
 }

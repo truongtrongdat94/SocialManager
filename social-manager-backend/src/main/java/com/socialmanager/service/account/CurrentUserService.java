@@ -1,4 +1,4 @@
-package com.socialmanager.service;
+package com.socialmanager.service.account;
 
 import com.socialmanager.exception.BusinessException;
 import com.socialmanager.model.User;
@@ -21,7 +21,8 @@ public class CurrentUserService {
         }
 
         String principal = authentication.getName().trim();
-        return userRepository.findByEmailIgnoreCaseOrNameIgnoreCase(principal, principal)
+        return userRepository.findByEmail(principal)
+            .or(() -> userRepository.findByUsername(principal))
                 .orElseThrow(() -> new BusinessException("Current user not found"));
     }
 }

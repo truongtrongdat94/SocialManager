@@ -11,8 +11,6 @@ spring:
     open-in-view: false
   quartz:
     job-store-type: memory
-    jdbc:
-      initialize-schema: never
 
 app:
   auth:
@@ -40,3 +38,21 @@ app:
     client-key: test
     client-secret: test
     redirect-uri: http://localhost/test
+
+INSTAGRAM_CLIENT_ID: test
+INSTAGRAM_CLIENT_SECRET: test
+INSTAGRAM_REDIRECT_URI: http://localhost/test
+
+FACEBOOK_CLIENT_ID: test
+FACEBOOK_CLIENT_SECRET: test
+FACEBOOK_REDIRECT_URI: http://localhost/test
+
+THREADS_CLIENT_ID: test
+THREADS_CLIENT_SECRET: test
+THREADS_REDIRECT_URI: http://localhost/test
+
+TIKTOK_CLIENT_KEY: test
+TIKTOK_CLIENT_SECRET: test
+TIKTOK_REDIRECT_URI: http://localhost/test
+
+AES_SECRET: test-aes-key-12345678901234

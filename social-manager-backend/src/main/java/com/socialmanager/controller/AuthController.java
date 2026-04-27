@@ -5,7 +5,7 @@ import com.socialmanager.dto.AuthResponse;
 import com.socialmanager.dto.LoginRequest;
 import com.socialmanager.dto.RegisterRequest;
 import com.socialmanager.dto.UserDto;
-import com.socialmanager.service.AuthService;
+import com.socialmanager.service.auth.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

@@ -1,4 +1,4 @@
-package com.socialmanager.service;
+package com.socialmanager.service.utils;
 
 import com.socialmanager.exception.BusinessException;
 import com.socialmanager.util.EncryptionUtil;

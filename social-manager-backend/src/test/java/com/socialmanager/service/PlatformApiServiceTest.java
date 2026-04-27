@@ -1,6 +1,9 @@
 package com.socialmanager.service;
 
+import com.socialmanager.dto.SocialPostPublishRequest;
 import com.socialmanager.model.Platform;
+import com.socialmanager.service.post.PlatformApiService;
+import com.socialmanager.service.post.SocialPostPublisher;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

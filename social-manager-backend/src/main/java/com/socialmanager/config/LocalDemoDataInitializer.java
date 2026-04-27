@@ -1,7 +1,7 @@
 package com.socialmanager.config;
 
 import com.socialmanager.model.Platform;
-import com.socialmanager.service.TokenCryptoService;
+import com.socialmanager.service.utils.TokenCryptoService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
