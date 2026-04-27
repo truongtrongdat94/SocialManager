@@ -80,12 +80,24 @@ export default function Dashboard() {
     [accounts, selectedId],
   )
 
+  const handleOAuthConnect = async (platform: Platform) => {
+    setActionError('')
+    setActionMessage('')
+
+    try {
+      const response = await api.get(`/social-accounts/connect/${platform}`)
+      window.location.href = response.data.data
+    } catch {
+      setActionError(`Cannot start ${platform} OAuth right now.`)
+    }
+  }
+
   const loadAccounts = async () => {
     setLoading(true)
     setActionError('')
 
     try {
-      const response = await api.get<SocialAccountResponse>('/api/social-accounts')
+      const response = await api.get<SocialAccountResponse>('/social-accounts')
       const loadedAccounts = Array.isArray(response.data.data) ? response.data.data : []
       setAccounts(loadedAccounts)
 
@@ -133,7 +145,7 @@ export default function Dashboard() {
     setActionMessage('')
 
     try {
-      await api.put(`/api/social-accounts/${selectedAccount.id}`, {
+      await api.put(`/social-accounts/${selectedAccount.id}`, {
         platform: form.platform,
         externalAccountId: form.externalAccountId || null,
         accountAlias: form.accountAlias || null,
@@ -162,7 +174,7 @@ export default function Dashboard() {
     setActionMessage('')
 
     try {
-      const response = await api.post<SocialAccountResponse>('/api/social-accounts', {
+      const response = await api.post<SocialAccountResponse>('/social-accounts', {
         platform: connectForm.platform,
         externalAccountId: connectForm.externalAccountId || null,
         accountAlias: connectForm.accountAlias || null,
@@ -272,7 +284,23 @@ export default function Dashboard() {
           <div>
             <p className="section-label">Connect new account</p>
             <h2>Add a posting account</h2>
+            <p className="muted">Use OAuth for a real Facebook login, or fill this form manually with an access token.</p>
           </div>
+        </div>
+
+        <div className="button-row" style={{ marginBottom: '1rem' }}>
+          <button type="button" onClick={() => void handleOAuthConnect('FACEBOOK')}>
+            Connect Facebook with OAuth
+          </button>
+          <button type="button" className="ghost-button" onClick={() => void handleOAuthConnect('INSTAGRAM')}>
+            Connect Instagram with OAuth
+          </button>
+          <button type="button" className="ghost-button" onClick={() => void handleOAuthConnect('THREADS')}>
+            Connect Threads with OAuth
+          </button>
+          <button type="button" className="ghost-button" onClick={() => void handleOAuthConnect('TIKTOK')}>
+            Connect TikTok with OAuth
+          </button>
         </div>
 
         <form className="account-form" onSubmit={handleConnectAccount}>
@@ -292,7 +320,7 @@ export default function Dashboard() {
               <input
                 value={connectForm.accessToken}
                 onChange={(event) => setConnectForm({ ...connectForm, accessToken: event.target.value })}
-                placeholder="Required"
+                placeholder="Required only for manual token entry"
               />
             </label>
           </div>

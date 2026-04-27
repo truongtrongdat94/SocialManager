@@ -42,6 +42,14 @@ abstract class AbstractHttpSocialPostPublisher implements SocialPostPublisher {
 
     protected abstract String buildPayload(SocialPostPublishRequest request) throws IOException;
 
+    protected String contentType(SocialPostPublishRequest request) {
+        return "application/json";
+    }
+
+    protected String authorizationHeaderValue(SocialPostPublishRequest request) {
+        return "Bearer " + request.token();
+    }
+
     protected ObjectMapper objectMapper() {
         return objectMapper;
     }
@@ -106,14 +114,21 @@ abstract class AbstractHttpSocialPostPublisher implements SocialPostPublisher {
     private HttpResult publishOnce(SocialPostPublishRequest request) throws IOException, InterruptedException {
         String endpoint = resolveEndpoint(request);
         String payload = buildPayload(request);
+        String contentType = contentType(request);
 
-        HttpRequest httpRequest = HttpRequest.newBuilder(URI.create(endpoint))
+        HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(endpoint))
                 .timeout(Duration.ofSeconds(20))
-                .header("Authorization", "Bearer " + request.token())
-                .header("Content-Type", "application/json")
-                .header("X-Idempotency-Key", request.idempotencyKey())
-                .POST(HttpRequest.BodyPublishers.ofString(payload, StandardCharsets.UTF_8))
-                .build();
+            .header("Content-Type", contentType)
+            .header("X-Idempotency-Key", request.idempotencyKey());
+
+        String authorizationHeader = authorizationHeaderValue(request);
+        if (authorizationHeader != null && !authorizationHeader.isBlank()) {
+            builder.header("Authorization", authorizationHeader);
+        }
+
+        HttpRequest httpRequest = builder
+            .POST(HttpRequest.BodyPublishers.ofString(payload, StandardCharsets.UTF_8))
+            .build();
 
         HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
         return new HttpResult(response.statusCode(), response.body());

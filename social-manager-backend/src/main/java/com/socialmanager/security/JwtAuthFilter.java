@@ -30,7 +30,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String path = request.getServletPath();
         return path.startsWith("/api/auth/")
                 || path.startsWith("/auth/")
-                || path.startsWith("/api/social-accounts/")
+                || path.startsWith("/api/social-accounts/callback/")
                 || path.startsWith("/oauth2/")
                 || path.startsWith("/login/")
                 || path.startsWith("/actuator/")

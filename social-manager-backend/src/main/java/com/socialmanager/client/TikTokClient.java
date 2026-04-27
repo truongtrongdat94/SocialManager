@@ -21,13 +21,13 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TikTokClient {
     private final RestTemplate restTemplate = new RestTemplate();
 
-    @Value("${TIKTOK_CLIENT_KEY}")
+    @Value("${app.tiktok.client-key:${TIKTOK_CLIENT_KEY:}}")
     private String tiktokClientKey;
 
-    @Value("${TIKTOK_CLIENT_SECRET}")
+    @Value("${app.tiktok.client-secret:${TIKTOK_CLIENT_SECRET:}}")
     private String tiktokClientSecret;
 
-    @Value("${TIKTOK_REDIRECT_URI}")
+    @Value("${app.tiktok.redirect-uri:${TIKTOK_REDIRECT_URI:http://localhost:8080/api/social-accounts/callback/tiktok}}")
     private String tiktokRedirectUri;
 
     public static final Map<String, String> pkceStorage = new ConcurrentHashMap<>();

@@ -8,6 +8,7 @@ import com.socialmanager.service.account.SocialAccountService;
 import com.socialmanager.util.JwtUtil;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +22,13 @@ import java.util.UUID;
 public class SocialAccountController {
     private final JwtUtil jwtUtil;
     private final SocialAccountService socialAccountService;
+
+    @Value("${app.frontend-url:http://localhost:3001}")
+    private String frontendUrl;
+
+    private String frontendPath(String path) {
+        return frontendUrl + path;
+    }
 
     @GetMapping("/connect/{platform}")
     public ResponseEntity<ApiResponse<String>> getConnectUrl(@PathVariable Platform platform, Authentication authentication) {
@@ -37,13 +45,18 @@ public class SocialAccountController {
         HttpServletResponse response
     ) throws Exception {
         if (error != null) {
-            response.sendRedirect("http://localhost:3000/failed");
+            response.sendRedirect(frontendPath("/failed"));
+            return;
+        }
+
+        if (code == null || state == null) {
+            response.sendRedirect(frontendPath("/failed"));
             return;
         }
 
         String username = jwtUtil.getUsernameFromToken(state);
         socialAccountService.connectFacebookAccount(code, username);
-        response.sendRedirect("http://localhost:3000/success");
+        response.sendRedirect(frontendPath("/success"));
     }
 
     @GetMapping("/callback/instagram")
@@ -54,13 +67,18 @@ public class SocialAccountController {
         HttpServletResponse response
     ) throws Exception {
         if (error != null) {
-            response.sendRedirect("http://localhost:3000/failed");
+            response.sendRedirect(frontendPath("/failed"));
+            return;
+        }
+
+        if (code == null || state == null) {
+            response.sendRedirect(frontendPath("/failed"));
             return;
         }
 
         String username = jwtUtil.getUsernameFromToken(state);
         socialAccountService.connectInstagramAccount(code, username);
-        response.sendRedirect("http://localhost:3000/success");
+        response.sendRedirect(frontendPath("/success"));
     }
 
     @GetMapping("/callback/threads")
@@ -71,13 +89,18 @@ public class SocialAccountController {
         HttpServletResponse response
     ) throws Exception {
         if (error != null) {
-            response.sendRedirect("http://localhost:3000/failed");
+            response.sendRedirect(frontendPath("/failed"));
+            return;
+        }
+
+        if (code == null || state == null) {
+            response.sendRedirect(frontendPath("/failed"));
             return;
         }
 
         String username = jwtUtil.getUsernameFromToken(state);
         socialAccountService.connectThreadsAccount(code, username);
-        response.sendRedirect("http://localhost:3000/success");
+        response.sendRedirect(frontendPath("/success"));
     }
 
     @GetMapping("/callback/tiktok")
@@ -88,14 +111,14 @@ public class SocialAccountController {
         HttpServletResponse response
     ) throws Exception {
         if (error != null) {
-            response.sendRedirect("http://localhost:3000/failed");
+            response.sendRedirect(frontendPath("/failed"));
             return;
         }
 
         if (state == null || !TikTokClient.pkceStorage.containsKey(state)) {
             // Có dấu hiệu tấn công CSRF hoặc session đã hết hạn
             System.out.println("LỖI: STATE KHÔNG KHỚP HOẶC BỊ NULL!");
-            response.sendRedirect("http://localhost:3000/failed");
+            response.sendRedirect(frontendPath("/failed"));
             return;
         }
 
@@ -104,7 +127,7 @@ public class SocialAccountController {
 
 
         socialAccountService.connectTikTokAccount(code, codeVerifier, username);
-        response.sendRedirect("http://localhost:3000/success");
+        response.sendRedirect(frontendPath("/success"));
     }
 
     @GetMapping

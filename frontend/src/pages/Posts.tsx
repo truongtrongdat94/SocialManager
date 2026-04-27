@@ -18,6 +18,28 @@ type ApiResponse<T> = {
   data: T
 }
 
+type ComposeMode = 'MANUAL' | 'AI'
+
+type AiSourceOption = {
+  id: string
+  contentPreview: string
+  mediaCount: number
+  createdAt: string
+}
+
+type AiPostSourcesResponse = {
+  aiGenerationLogs: AiSourceOption[]
+  imageGenerations: AiSourceOption[]
+}
+
+type AiPostComposeResponse = {
+  post: ScheduledPostPreview
+  contentSource: string
+  resolvedMediaUrls: string[]
+  aiGenerationLogId?: string
+  imageGenerationId?: string
+}
+
 type ScheduledPostPreview = {
   id: string
   content: string
@@ -74,6 +96,11 @@ export default function Posts() {
   const hasAuth = Boolean(localStorage.getItem('token'))
 
   const [accounts, setAccounts] = useState<SocialAccount[]>([])
+  const [composeMode, setComposeMode] = useState<ComposeMode>('MANUAL')
+  const [aiGenerationLogId, setAiGenerationLogId] = useState('')
+  const [imageGenerationId, setImageGenerationId] = useState('')
+  const [aiGenerationOptions, setAiGenerationOptions] = useState<AiSourceOption[]>([])
+  const [imageGenerationOptions, setImageGenerationOptions] = useState<AiSourceOption[]>([])
   const [selectedAccountId, setSelectedAccountId] = useState('')
   const [content, setContent] = useState('')
   const [mediaUrl, setMediaUrl] = useState('')
@@ -112,16 +139,19 @@ export default function Posts() {
     setError('')
 
     try {
-      const [accountsResponse, summaryResponse, recentResponse] = await Promise.all([
-        api.get<ApiResponse<SocialAccount[]>>('/api/social-accounts'),
-        api.get<ApiResponse<MonitorSummary>>('/api/posts/monitor/summary'),
-        api.get<ApiResponse<MonitorItem[]>>('/api/posts/monitor/recent'),
+      const [accountsResponse, summaryResponse, recentResponse, aiSourcesResponse] = await Promise.all([
+        api.get<ApiResponse<SocialAccount[]>>('/social-accounts'),
+        api.get<ApiResponse<MonitorSummary>>('/posts/monitor/summary'),
+        api.get<ApiResponse<MonitorItem[]>>('/posts/monitor/recent'),
+        api.get<ApiResponse<AiPostSourcesResponse>>('/posts/ai/sources?limit=20').catch(() => null),
       ])
 
       const loadedAccounts = accountsResponse.data.data ?? []
       setAccounts(loadedAccounts)
       setSummary(summaryResponse.data.data ?? null)
       setRecent(recentResponse.data.data ?? [])
+      setAiGenerationOptions(aiSourcesResponse?.data?.data?.aiGenerationLogs ?? [])
+      setImageGenerationOptions(aiSourcesResponse?.data?.data?.imageGenerations ?? [])
 
       if (!selectedAccountId && loadedAccounts.length > 0) {
         setSelectedAccountId(loadedAccounts[0].id)
@@ -151,7 +181,7 @@ export default function Posts() {
         params.set('search', historySearch)
       }
 
-      const response = await api.get<ApiResponse<PagedHistoryResponse>>(`/api/posts/history?${params.toString()}`)
+      const response = await api.get<ApiResponse<PagedHistoryResponse>>(`/posts/history?${params.toString()}`)
       const payload = response.data.data
       setHistory(payload?.items ?? [])
       setHistoryTotal(payload?.total ?? 0)
@@ -195,10 +225,20 @@ export default function Posts() {
       setMediaUrl('https://images.unsplash.com/photo-1523275335684-37898b6baf30')
     }
 
-    if (!content) {
+    if (composeMode === 'MANUAL' && !content) {
       setContent(`Post for ${selectedAccount.accountName ?? selectedAccount.accountAlias ?? selectedAccount.platform}`)
     }
-  }, [selectedAccount])
+  }, [composeMode, selectedAccount, content, mediaUrl])
+
+  const loadAiSources = async () => {
+    try {
+      const response = await api.get<ApiResponse<AiPostSourcesResponse>>('/posts/ai/sources?limit=20')
+      setAiGenerationOptions(response.data.data?.aiGenerationLogs ?? [])
+      setImageGenerationOptions(response.data.data?.imageGenerations ?? [])
+    } catch {
+      setError('Cannot load AI sources right now.')
+    }
+  }
 
   const buildRequest = () => ({
     socialAccountId: selectedAccountId,
@@ -207,16 +247,54 @@ export default function Posts() {
     scheduledTime,
   })
 
+  const buildAiRequest = () => ({
+    socialAccountId: selectedAccountId,
+    scheduledTime,
+    aiGenerationLogId: aiGenerationLogId || undefined,
+    imageGenerationId: imageGenerationId || undefined,
+    contentOverride: content.trim() ? content : undefined,
+    mediaUrl: mediaUrl.trim() ? mediaUrl : undefined,
+  })
+
+  const formatContentSource = (value?: string) => {
+    if (!value) {
+      return 'unknown source'
+    }
+
+    return value.toLowerCase().replace(/_/g, ' ')
+  }
+
+  const formatAiOption = (item: AiSourceOption) => {
+    const preview = item.contentPreview || '(empty caption)'
+    return `${preview} • ${item.mediaCount} media • ${item.createdAt}`
+  }
+
   const handlePreview = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setSubmitting(true)
     setError('')
     setMessage('')
 
+    if (composeMode === 'AI' && !content.trim() && !aiGenerationLogId && !imageGenerationId) {
+      setError('Choose at least one AI source or provide content override.')
+      setSubmitting(false)
+      return
+    }
+
     try {
-      const response = await api.post<ApiResponse<ScheduledPostPreview>>('/api/posts/preview', buildRequest())
-      setPreview(response.data.data ?? null)
-      setMessage('Preview loaded.')
+      if (composeMode === 'AI') {
+        const response = await api.post<ApiResponse<AiPostComposeResponse>>('/posts/ai/preview', buildAiRequest())
+        const payload = response.data.data
+        setPreview(payload?.post ?? null)
+        if (!mediaUrl && payload?.resolvedMediaUrls?.length) {
+          setMediaUrl(payload.resolvedMediaUrls[0])
+        }
+        setMessage(`AI preview loaded (${formatContentSource(payload?.contentSource)}).`)
+      } else {
+        const response = await api.post<ApiResponse<ScheduledPostPreview>>('/posts/preview', buildRequest())
+        setPreview(response.data.data ?? null)
+        setMessage('Preview loaded.')
+      }
     } catch {
       setError('Cannot load preview right now.')
     } finally {
@@ -229,10 +307,26 @@ export default function Posts() {
     setError('')
     setMessage('')
 
+    if (composeMode === 'AI' && !content.trim() && !aiGenerationLogId && !imageGenerationId) {
+      setError('Choose at least one AI source or provide content override.')
+      setSubmitting(false)
+      return
+    }
+
     try {
-      const response = await api.post<ApiResponse<ScheduledPostPreview>>('/api/posts/schedule', buildRequest())
-      setPreview(response.data.data ?? null)
-      setMessage('Post scheduled successfully.')
+      if (composeMode === 'AI') {
+        const response = await api.post<ApiResponse<AiPostComposeResponse>>('/posts/ai/schedule', buildAiRequest())
+        const payload = response.data.data
+        setPreview(payload?.post ?? null)
+        if (!mediaUrl && payload?.resolvedMediaUrls?.length) {
+          setMediaUrl(payload.resolvedMediaUrls[0])
+        }
+        setMessage(`AI post scheduled (${formatContentSource(payload?.contentSource)}).`)
+      } else {
+        const response = await api.post<ApiResponse<ScheduledPostPreview>>('/posts/schedule', buildRequest())
+        setPreview(response.data.data ?? null)
+        setMessage('Post scheduled successfully.')
+      }
       await loadData()
     } catch {
       setError('Cannot schedule post right now.')
@@ -247,7 +341,7 @@ export default function Posts() {
     setMessage('')
 
     try {
-      await api.patch<ApiResponse<ScheduledPostPreview>>(`/api/posts/${postId}/cancel`)
+      await api.patch<ApiResponse<ScheduledPostPreview>>(`/posts/${postId}/cancel`)
       setMessage('Post cancelled.')
       await Promise.all([loadData(), loadHistory()])
     } catch {
@@ -266,7 +360,7 @@ export default function Posts() {
     setMessage('')
 
     try {
-      await api.patch<ApiResponse<ScheduledPostPreview>>(`/api/posts/${postId}/reschedule`, {
+      await api.patch<ApiResponse<ScheduledPostPreview>>(`/posts/${postId}/reschedule`, {
         scheduledTime: localIso,
       })
       setMessage('Post rescheduled for one hour from now.')
@@ -321,6 +415,14 @@ export default function Posts() {
 
           <form className="account-form" onSubmit={handlePreview}>
             <label>
+              Compose Mode
+              <select value={composeMode} onChange={(event) => setComposeMode(event.target.value as ComposeMode)}>
+                <option value="MANUAL">Manual</option>
+                <option value="AI">AI-assisted</option>
+              </select>
+            </label>
+
+            <label>
               Social Account
               <select value={selectedAccountId} onChange={(event) => setSelectedAccountId(event.target.value)}>
                 {accounts.map((account) => (
@@ -331,9 +433,48 @@ export default function Posts() {
               </select>
             </label>
 
+            {composeMode === 'AI' ? (
+              <>
+                <div className="button-row">
+                  <button type="button" className="ghost-button" onClick={() => void loadAiSources()} disabled={submitting}>
+                    Refresh AI sources
+                  </button>
+                </div>
+
+                <label>
+                  AI Caption Source (optional)
+                  <select value={aiGenerationLogId} onChange={(event) => setAiGenerationLogId(event.target.value)}>
+                    <option value="">None</option>
+                    {aiGenerationOptions.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {formatAiOption(item)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label>
+                  AI Image Source (optional)
+                  <select value={imageGenerationId} onChange={(event) => setImageGenerationId(event.target.value)}>
+                    <option value="">None</option>
+                    {imageGenerationOptions.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {formatAiOption(item)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </>
+            ) : null}
+
             <label>
-              Content
-              <textarea rows={6} value={content} onChange={(event) => setContent(event.target.value)} />
+              {composeMode === 'AI' ? 'Content Override (optional)' : 'Content'}
+              <textarea
+                rows={6}
+                value={content}
+                onChange={(event) => setContent(event.target.value)}
+                placeholder={composeMode === 'AI' ? 'Leave blank to use selected AI source content' : ''}
+              />
             </label>
 
             <label>

@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 @Service
@@ -47,16 +49,27 @@ public class MetaSocialPostPublisher extends AbstractHttpSocialPostPublisher {
 
     @Override
     protected String buildPayload(SocialPostPublishRequest request) throws IOException {
-        var payload = objectMapper().createObjectNode();
+        var payload = new StringBuilder();
+        appendFormField(payload, "access_token", request.token());
 
         if (hasImageUrl(request.mediaUrl())) {
-            payload.put("url", request.mediaUrl());
-            payload.put("caption", request.content());
+            appendFormField(payload, "url", request.mediaUrl());
+            appendFormField(payload, "caption", request.content());
         } else {
-            payload.put("message", request.content());
+            appendFormField(payload, "message", request.content());
         }
 
         return payload.toString();
+    }
+
+    @Override
+    protected String contentType(SocialPostPublishRequest request) {
+        return "application/x-www-form-urlencoded";
+    }
+
+    @Override
+    protected String authorizationHeaderValue(SocialPostPublishRequest request) {
+        return null;
     }
 
     private boolean hasImageUrl(String mediaUrl) {
@@ -89,5 +102,19 @@ public class MetaSocialPostPublisher extends AbstractHttpSocialPostPublisher {
         }
 
         return lower.substring(dotIndex + 1);
+    }
+
+    private void appendFormField(StringBuilder payload, String key, String value) {
+        if (value == null || value.isBlank()) {
+            return;
+        }
+
+        if (!payload.isEmpty()) {
+            payload.append('&');
+        }
+
+        payload.append(URLEncoder.encode(key, StandardCharsets.UTF_8));
+        payload.append('=');
+        payload.append(URLEncoder.encode(value, StandardCharsets.UTF_8));
     }
 }

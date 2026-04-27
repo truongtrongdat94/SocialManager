@@ -10,6 +10,7 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
@@ -26,6 +27,7 @@ public class LocalDemoDataInitializer implements ApplicationRunner {
 
     private final JdbcTemplate jdbcTemplate;
     private final TokenCryptoService tokenCryptoService;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional
@@ -90,23 +92,41 @@ public class LocalDemoDataInitializer implements ApplicationRunner {
 
     private UUID ensureUser() {
         var existing = entityManager.createQuery(
-                "select u.id from User u where u.email = :email", UUID.class)
+                "select u from User u where u.email = :email", com.socialmanager.model.User.class)
             .setParameter("email", "devuser")
                 .getResultStream()
                 .findFirst();
 
         if (existing.isPresent()) {
-            return existing.get();
+            var user = existing.get();
+            boolean changed = false;
+
+            if (user.getUsername() == null || user.getUsername().isBlank()) {
+                user.setUsername("devuser");
+                changed = true;
+            }
+
+            if (user.getPassword() == null || user.getPassword().isBlank()) {
+                user.setPassword(passwordEncoder.encode("devpass123"));
+                changed = true;
+            }
+
+            if (changed) {
+                entityManager.merge(user);
+            }
+
+            return user.getId();
         }
 
         UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
         entityManager.createNativeQuery("""
-                insert into users (id, email, password, name, created_at, updated_at)
-                values (:id, :email, :password, :name, current_timestamp, current_timestamp)
+                insert into users (id, email, username, password, name, created_at, updated_at)
+                values (:id, :email, :username, :password, :name, current_timestamp, current_timestamp)
                 """)
                 .setParameter("id", userId)
             .setParameter("email", "devuser")
-                .setParameter("password", "")
+                .setParameter("username", "devuser")
+                .setParameter("password", passwordEncoder.encode("devpass123"))
                 .setParameter("name", "Local Demo User")
                 .executeUpdate();
         return userId;
