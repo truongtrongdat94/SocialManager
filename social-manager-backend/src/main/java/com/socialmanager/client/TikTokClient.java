@@ -2,6 +2,7 @@ package com.socialmanager.client;
 
 import com.socialmanager.dto.external.*;
 import com.socialmanager.dto.external.TikTokResponse.TikTok;
+import com.socialmanager.exception.ExternalApiCallException;
 import com.socialmanager.util.PKCEUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -9,6 +10,7 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.URLEncoder;
@@ -65,20 +67,22 @@ public class TikTokClient {
         body.add("code", code);
         body.add("grant_type", "authorization_code");
         body.add("redirect_uri", tiktokRedirectUri);
-        body.add("code_verifier", codeVerifier);     // V2 bắt buộc truyền code_verifier để verify PKCE
+        body.add("code_verifier", codeVerifier);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        headers.setCacheControl(CacheControl.noCache()); // V2 yêu cầu Cache-Control: no-cache cho api lấy token
-
+        headers.setCacheControl(CacheControl.noCache());
         HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
-        TokenResponse response = restTemplate.postForObject(tokenUrl, request, TokenResponse.class);
 
-        if (response == null || response.accessToken() == null) {
-            throw new RuntimeException("Failed to get TikTok access token");
+        try {
+            TokenResponse response = restTemplate.postForObject(tokenUrl, request, TokenResponse.class);
+            if (response == null || response.accessToken() == null) {
+                throw new ExternalApiCallException("Không thể lấy access token từ TikTok (Phản hồi rỗng)");
+            }
+            return response;
+        } catch (HttpClientErrorException e) {
+            throw new ExternalApiCallException("Lỗi từ TikTok API khi đổi token: " + e.getResponseBodyAsString());
         }
-
-        return response;
     }
 
     public TikTok fetchTikTokAccount(String token) {
@@ -88,20 +92,25 @@ public class TikTokClient {
 
         HttpEntity<Void> request = new HttpEntity<>(headers);
 
-        ResponseEntity<TikTokResponse> response = restTemplate.exchange(
-            userInfoUrl,
-            HttpMethod.GET,
-            request,
-            TikTokResponse.class
-        );
+        try {
+            ResponseEntity<TikTokResponse> response = restTemplate.exchange(
+                userInfoUrl,
+                HttpMethod.GET,
+                request,
+                TikTokResponse.class
+            );
 
-        TikTokResponse body = response.getBody();
+            TikTokResponse body = response.getBody();
 
-        if (body == null || body.data() == null || body.data().user() == null) {
-            throw new RuntimeException("Failed to fetch TikTok user info");
+            if (body == null || body.data() == null || body.data().user() == null) {
+                throw new ExternalApiCallException("Không thể lấy thông tin user từ TikTok (Phản hồi rỗng)");
+            }
+
+            return body.data().user();
+        } catch (HttpClientErrorException e) {
+            throw new ExternalApiCallException("Lỗi từ TikTok API khi lấy thông tin account: " + e.getResponseBodyAsString());
         }
 
-        return body.data().user();
     }
 
     public TokenResponse refreshAccessToken(String currentRefreshToken) {
@@ -116,16 +125,17 @@ public class TikTokClient {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
         headers.setCacheControl(CacheControl.noCache());
-
         HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
 
-        TokenResponse response = restTemplate.postForObject(tokenUrl, request, TokenResponse.class);
-
-        if (response == null || response.accessToken() == null) {
-            throw new RuntimeException("Failed to refresh TikTok access token. Refresh token might be expired.");
+        try {
+            TokenResponse response = restTemplate.postForObject(tokenUrl, request, TokenResponse.class);
+            if (response == null || response.accessToken() == null) {
+                throw new ExternalApiCallException("Không thể làm mới token TikTok (Phản hồi rỗng)");
+            }
+            return response;
+        } catch (HttpClientErrorException e) {
+            throw new ExternalApiCallException("Lỗi từ TikTok API khi làm mới token: " + e.getResponseBodyAsString());
         }
-
-        return response;
     }
 }
 

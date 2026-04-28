@@ -1,8 +1,6 @@
 spring:
   application:
     name: social-manager-backend
-  config:
-    import: optional:file:.env.properties
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
   datasource:
@@ -29,6 +27,7 @@ spring:
             driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
 
 app:
+  frontend-url: ${FRONTEND_URL:http://localhost:3001}
   auth:
     username: ${AUTH_USERNAME:devuser}
     password: ${AUTH_PASSWORD:devpass123}
@@ -44,17 +43,31 @@ app:
     expiration: ${JWT_EXPIRATION:86400000}
   aes-secret: ${AES_SECRET:12345678901234567890123456789012}
   gemini:
-    api-key: ${GEMINI_API_KEY:}
+    api-key: ${GEMINI_API_KEY}
+    url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent"  
   leonardo:
-    api-key: ${LEONARDO_API_KEY:}
+    api-key: ${LEONARDO_API_KEY}
+    url: "https://cloud.leonardo.ai/api/rest/v1/generations"   
   cloudinary:
-    cloud-name: ${CLOUDINARY_CLOUD_NAME:}
-    api-key: ${CLOUDINARY_API_KEY:}
-    api-secret: ${CLOUDINARY_API_SECRET:}
+    cloud-name: ${CLOUDINARY_CLOUD_NAME}
+    api-key: ${CLOUDINARY_API_KEY}
+    api-secret: ${CLOUDINARY_API_SECRET}
   meta:
     app-id: ${META_APP_ID:}
     app-secret: ${META_APP_SECRET:}
     redirect-uri: ${META_REDIRECT_URI:http://localhost:8080/api/auth/callback/meta}
+  facebook:
+    client-id: ${FACEBOOK_CLIENT_ID:${META_APP_ID:}}
+    client-secret: ${FACEBOOK_CLIENT_SECRET:${META_APP_SECRET:}}
+    redirect-uri: ${FACEBOOK_REDIRECT_URI:${META_REDIRECT_URI:http://localhost:8080/api/social-accounts/callback/facebook}}
+  instagram:
+    client-id: ${INSTAGRAM_CLIENT_ID:}
+    client-secret: ${INSTAGRAM_CLIENT_SECRET:}
+    redirect-uri: ${INSTAGRAM_REDIRECT_URI:http://localhost:8080/api/social-accounts/callback/instagram}
+  threads:
+    client-id: ${THREADS_CLIENT_ID:}
+    client-secret: ${THREADS_CLIENT_SECRET:}
+    redirect-uri: ${THREADS_REDIRECT_URI:http://localhost:8080/api/social-accounts/callback/threads}
   tiktok:
     client-key: ${TIKTOK_CLIENT_KEY:}
     client-secret: ${TIKTOK_CLIENT_SECRET:}
@@ -62,6 +75,11 @@ app:
 
 server:
   port: 8080
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+      enabled: true
 
 springdoc:
   swagger-ui:

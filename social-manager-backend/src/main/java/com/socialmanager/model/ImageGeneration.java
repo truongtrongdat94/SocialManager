@@ -1,5 +1,6 @@
 package com.socialmanager.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore; // <-- THÊM IMPORT NÀY
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.Array;
@@ -18,8 +19,9 @@ public class ImageGeneration {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = true)
     private User user;
 
     @Column(columnDefinition = "TEXT")
@@ -61,4 +63,7 @@ public class ImageGeneration {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
     }
+    // Thêm dòng này vào cùng chỗ với các biến khác (như prompt, status...)
+    @Column(name = "cloudinary_url")
+    private String cloudinaryUrl;
 }

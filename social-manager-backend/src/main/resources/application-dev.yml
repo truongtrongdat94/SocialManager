@@ -20,4 +20,30 @@ spring:
         registration:
           google:
             client-id: ${GOOGLE_CLIENT_ID}
+<<<<<<< Updated upstream
             client-secret: ${GOOGLE_CLIENT_SECRET}
+=======
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+
+app:
+  frontend-url: ${FRONTEND_URL:http://localhost:3001}
+    client-id: ${FACEBOOK_CLIENT_ID:${META_APP_ID:}}
+
+    app:
+      frontend-url: ${FRONTEND_URL:http://localhost:3001}
+      facebook:
+        client-id: ${FACEBOOK_CLIENT_ID:${META_APP_ID:}}
+        client-secret: ${FACEBOOK_CLIENT_SECRET:${META_APP_SECRET:}}
+        redirect-uri: ${FACEBOOK_REDIRECT_URI:${META_REDIRECT_URI:http://localhost:8080/api/social-accounts/callback/facebook}}
+      instagram:
+        client-id: ${INSTAGRAM_CLIENT_ID:}
+        client-secret: ${INSTAGRAM_CLIENT_SECRET:}
+        redirect-uri: ${INSTAGRAM_REDIRECT_URI:http://localhost:8080/api/social-accounts/callback/instagram}
+      threads:
+        client-id: ${THREADS_CLIENT_ID:}
+        client-secret: ${THREADS_CLIENT_SECRET:}
+        redirect-uri: ${THREADS_REDIRECT_URI:http://localhost:8080/api/social-accounts/callback/threads}
+      tiktok:
+        client-key: ${TIKTOK_CLIENT_KEY:}
+        client-secret: ${TIKTOK_CLIENT_SECRET:}
+        redirect-uri: ${TIKTOK_REDIRECT_URI:http://localhost:8080/api/social-accounts/callback/tiktok}

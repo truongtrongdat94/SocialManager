@@ -1,7 +1,9 @@
 package com.socialmanager.client;
 
 import com.socialmanager.dto.external.*;
+import com.socialmanager.exception.ExternalApiCallException;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -9,6 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.URLEncoder;
@@ -43,45 +46,55 @@ public class InstagramClient {
         );
     }
 
+    private String getLongTokenUrl(TokenResponse shortTokenRes) {
+        if (shortTokenRes == null || shortTokenRes.accessToken() == null) {
+            throw new ExternalApiCallException("Không thể lấy short token từ Instagram (Phản hồi rỗng)");
+        }
+
+        String shortLivedToken = shortTokenRes.accessToken();
+
+        return "https://graph.instagram.com/access_token"
+            + "?grant_type=ig_exchange_token"
+            + "&client_secret=" + instagramClientSecret
+            + "&access_token=" + shortLivedToken;
+    }
+
     public TokenResponse exchangeCodeForInstagramLongToken(String code) {
         if (code.endsWith("#_")) {
             code = code.substring(0, code.length() - 2);
         }
 
-        String shortTokenUrl = "https://api.instagram.com/oauth/access_token";
+        try {
+            String shortTokenUrl = "https://api.instagram.com/oauth/access_token";
 
-        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
-        body.add("client_id", instagramClientId);
-        body.add("client_secret", instagramClientSecret);
-        body.add("grant_type", "authorization_code");
-        body.add("redirect_uri", instagramRedirectUri);
-        body.add("code", code);
+            MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+            body.add("client_id", instagramClientId);
+            body.add("client_secret", instagramClientSecret);
+            body.add("grant_type", "authorization_code");
+            body.add("redirect_uri", instagramRedirectUri);
+            body.add("code", code);
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
-        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
+            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
 
-        TokenResponse shortTokenRes = restTemplate.postForObject(shortTokenUrl, request, TokenResponse.class);
+            TokenResponse shortTokenRes = restTemplate.postForObject(shortTokenUrl, request, TokenResponse.class);
 
-        if (shortTokenRes == null || shortTokenRes.accessToken() == null) {
-            throw new RuntimeException("Failed to get Instagram short-lived token");
+            String longTokenUrl = getLongTokenUrl(shortTokenRes);
+
+            TokenResponse longTokenRes = restTemplate.getForObject(longTokenUrl, TokenResponse.class);
+
+            if (longTokenRes == null || longTokenRes.accessToken() == null) {
+                throw new ExternalApiCallException("Không thể lấy long token từ Instagram (Phản hồi rỗng)");
+            }
+
+            return longTokenRes;
+        } catch (HttpClientErrorException e) {
+            throw new ExternalApiCallException("Lỗi từ Instagram API khi đổi token: " + e.getResponseBodyAsString());
         }
 
-        String shortLivedToken = shortTokenRes.accessToken();
 
-        String longTokenUrl = "https://graph.instagram.com/access_token"
-            + "?grant_type=ig_exchange_token"
-            + "&client_secret=" + instagramClientSecret
-            + "&access_token=" + shortLivedToken;
-
-        TokenResponse longTokenRes = restTemplate.getForObject(longTokenUrl, TokenResponse.class);
-
-        if (longTokenRes == null || longTokenRes.accessToken() == null) {
-            throw new RuntimeException("Failed to get Instagram long-lived token");
-        }
-
-        return longTokenRes;
     }
 
     public InstagramResponse fetchInstagramAccount(String token) {
@@ -89,12 +102,15 @@ public class InstagramClient {
             + "?fields=id,username,name,profile_picture_url"
             + "&access_token=" + token;
 
-        InstagramResponse response = restTemplate.getForObject(userInfoUrl, InstagramResponse.class);
-        if (response == null || response.id() == null) {
-            throw new RuntimeException("Failed to fetch Instagram user info");
+        try {
+            InstagramResponse response = restTemplate.getForObject(userInfoUrl, InstagramResponse.class);
+            if (response == null || response.id() == null) {
+                throw new ExternalApiCallException("Không thể lấy thông tin user từ Instagram (Phản hồi rỗng)");
+            }
+            return response;
+        } catch (HttpClientErrorException e) {
+            throw new ExternalApiCallException("Lỗi từ Instagram API khi lấy thông tin account: " + e.getResponseBodyAsString());
         }
-
-        return response;
     }
 
     public TokenResponse refreshAccessToken(String currentAccessToken) {
@@ -102,13 +118,16 @@ public class InstagramClient {
             "?grant_type=ig_refresh_token" +
             "&access_token=" + currentAccessToken;
 
-        TokenResponse response = restTemplate.getForObject(url, TokenResponse.class);
+        try {
+            TokenResponse response = restTemplate.getForObject(url, TokenResponse.class);
 
-        if (response == null || response.accessToken() == null) {
-            throw new RuntimeException("Failed to refresh Instagram access token. Token might be invalid or expired.");
+            if (response == null || response.accessToken() == null) {
+                throw new ExternalApiCallException("Không thể làm mới token Instagram (Phản hồi rỗng)");
+            }
+            return response;
+        } catch (HttpClientErrorException e) {
+            throw new ExternalApiCallException("Lỗi từ Instagram API khi làm mới token: " + e.getResponseBodyAsString());
         }
-
-        return response;
     }
 }
 
