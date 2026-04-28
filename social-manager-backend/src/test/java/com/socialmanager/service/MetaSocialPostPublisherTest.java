@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.net.URLDecoder;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -60,8 +61,9 @@ class MetaSocialPostPublisherTest {
         assertEquals(2, callCount.get());
         assertEquals(2, capturedBodies.size());
         assertEquals("post-abc", capturedIdempotencyKeys.get(0));
-        assertTrue(capturedBodies.get(0).contains("\"caption\":\"seo caption\""));
-        assertTrue(capturedBodies.get(0).contains("\"url\":\"https://cdn.example.com/image.png\""));
+        assertTrue(decodedBody(capturedBodies.get(0)).contains("access_token=token-abc"));
+        assertTrue(decodedBody(capturedBodies.get(0)).contains("caption=seo caption"));
+        assertTrue(decodedBody(capturedBodies.get(0)).contains("url=https://cdn.example.com/image.png"));
     }
 
     private void handleMetaExchange(HttpExchange exchange, AtomicInteger callCount,
@@ -81,6 +83,10 @@ class MetaSocialPostPublisherTest {
 
     private String readBody(InputStream inputStream) throws IOException {
         return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+    }
+
+    private String decodedBody(String body) {
+        return URLDecoder.decode(body, StandardCharsets.UTF_8);
     }
 
     private void sendResponse(HttpExchange exchange, int status, String body) throws IOException {

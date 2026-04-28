@@ -416,6 +416,16 @@ button, input {
   color: #067647;
 }
 
+.warning-text {
+  margin-top: -0.35rem;
+  padding: 0.8rem 0.95rem;
+  border: 1px solid rgba(178, 106, 0, 0.2);
+  border-radius: 14px;
+  background: rgba(255, 171, 0, 0.08);
+  color: #8a5200;
+  line-height: 1.45;
+}
+
 .dashboard-form-card,
 .dashboard-list-card {
   min-height: 100%;

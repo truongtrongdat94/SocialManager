@@ -171,6 +171,28 @@ Các endpoint này lấy theo user đang đăng nhập. Trong `local` profile, d
 - `socialAccountId = 550e8400-e29b-41d4-a716-446655440000`
 - `accountName = Local Facebook Demo`
 
+### 9. Facebook OAuth setup
+
+Nếu bạn bấm `Connect Facebook` mà thấy trang kiểu `Ứng dụng không hoạt động`, thì backend đã tạo đúng link, nhưng Meta app chưa cho tài khoản Facebook của bạn quyền dùng app.
+
+Checklist bắt buộc trên Meta Developer Console:
+
+- App phải ở `Development` nhưng tài khoản Facebook của bạn phải là `Admin`, `Developer`, hoặc `Tester` của app, hoặc app phải được chuyển sang `Live`.
+- `Facebook Login` phải được bật cho app.
+- `Valid OAuth Redirect URIs` phải chứa đúng URI callback:
+	- `http://localhost:8080/api/social-accounts/callback/facebook`
+- `App ID` và `App Secret` phải được set trong môi trường backend.
+- Nếu bạn dùng biến `META_APP_ID` / `META_APP_SECRET`, backend sẽ tự fallback sang các giá trị đó cho Facebook connect.
+- Nếu redirect URI hoặc app role chưa đúng, Facebook sẽ không cho tiếp tục đăng nhập, dù backend đã trả về một link hợp lệ.
+
+Khi cấu hình đúng, luồng sẽ đi theo thứ tự:
+
+1. Đăng nhập vào app ở [http://localhost:3001/login](http://localhost:3001/login).
+2. Bấm `Connect Facebook`.
+3. Đồng ý trên Facebook.
+4. Backend callback về `/api/social-accounts/callback/facebook`.
+5. Frontend nhận redirect success và đi tới trang `Success`.
+
 ### 9. Build production
 
 ```powershell

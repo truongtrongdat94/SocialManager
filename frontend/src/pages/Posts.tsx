@@ -269,6 +269,29 @@ export default function Posts() {
     return `${preview} • ${item.mediaCount} media • ${item.createdAt}`
   }
 
+  const mediaUrlWarning = useMemo(() => {
+    const value = mediaUrl.trim()
+    if (!value) {
+      return ''
+    }
+
+    const normalized = value.toLowerCase()
+    if (!/^https?:\/\//.test(normalized)) {
+      return 'Media URL should start with http:// or https://.'
+    }
+
+    const hasKnownExtension = /\.(jpg|jpeg|png|webp|gif|mp4|mov|webm)(?:$|[?#])/i.test(normalized)
+    if (hasKnownExtension) {
+      return ''
+    }
+
+    if (selectedAccount?.platform === 'TIKTOK') {
+      return 'TikTok expects a video URL. Extensionless links only work if the host exposes a video content type.'
+    }
+
+    return 'This URL does not end in a known image/video extension. The backend will try content-type detection, but the post may still fail if the host blocks it.'
+  }, [mediaUrl, selectedAccount])
+
   const handlePreview = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setSubmitting(true)
@@ -481,6 +504,8 @@ export default function Posts() {
               Media URL
               <input value={mediaUrl} onChange={(event) => setMediaUrl(event.target.value)} />
             </label>
+
+            {mediaUrlWarning ? <p className="warning-text">{mediaUrlWarning}</p> : null}
 
             <label>
               Scheduled Time

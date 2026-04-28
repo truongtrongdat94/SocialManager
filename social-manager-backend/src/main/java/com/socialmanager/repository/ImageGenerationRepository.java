@@ -13,4 +13,10 @@ public interface ImageGenerationRepository extends JpaRepository<ImageGeneration
     Optional<ImageGeneration> findByIdAndUser_Id(UUID id, UUID userId);
 
     List<ImageGeneration> findByUser_IdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
+
+    List<ImageGeneration> findByUserId(UUID userId);
+
+    List<ImageGeneration> findByStatus(String status);
+
+    List<ImageGeneration> findAllByOrderByCreatedAtDesc();
 }

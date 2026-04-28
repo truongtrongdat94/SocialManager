@@ -4,7 +4,10 @@ import com.socialmanager.exception.BusinessException;
 import com.socialmanager.model.Platform;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.URI;
+import java.net.URL;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.Set;
@@ -24,7 +27,7 @@ public class MediaPreparationService {
                 .filter(candidate -> candidate != null && !candidate.isBlank())
                 .map(String::trim)
                 .filter(this::isHttpOrHttps)
-                .filter(candidate -> supportsExtension(platform, extensionOf(candidate)))
+            .filter(candidate -> isSupportedMediaUrl(platform, candidate))
                 .findFirst()
                 .orElseThrow(() -> new BusinessException("No supported media URL found for platform " + platform));
     }
@@ -49,6 +52,58 @@ public class MediaPreparationService {
         }
 
         return META_ALLOWED_EXTENSIONS.contains(extension);
+    }
+
+    private boolean isSupportedMediaUrl(Platform platform, String rawUrl) {
+        String extension = extensionOf(rawUrl);
+        if (supportsExtension(platform, extension)) {
+            return true;
+        }
+
+        if (!extension.isBlank()) {
+            return false;
+        }
+
+        String contentType = detectContentType(rawUrl);
+        if (contentType == null || contentType.isBlank()) {
+            return false;
+        }
+
+        String normalized = contentType.toLowerCase(Locale.ROOT);
+        if (platform == Platform.TIKTOK) {
+            return normalized.startsWith("video/");
+        }
+
+        return normalized.startsWith("image/") || normalized.startsWith("video/");
+    }
+
+    private String detectContentType(String rawUrl) {
+        HttpURLConnection connection = null;
+        try {
+            connection = (HttpURLConnection) new URL(rawUrl).openConnection();
+            connection.setInstanceFollowRedirects(true);
+            connection.setRequestMethod("HEAD");
+            connection.setConnectTimeout(3000);
+            connection.setReadTimeout(3000);
+
+            int status = connection.getResponseCode();
+            if (status >= 400) {
+                return null;
+            }
+
+            String contentType = connection.getContentType();
+            if (contentType != null && !contentType.isBlank()) {
+                return contentType;
+            }
+
+            return connection.getHeaderField("Content-Type");
+        } catch (IOException ex) {
+            return null;
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
     }
 
     private String extensionOf(String rawUrl) {

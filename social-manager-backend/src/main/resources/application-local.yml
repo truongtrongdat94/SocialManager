@@ -13,6 +13,7 @@ spring:
     job-store-type: memory
 
 app:
+  frontend-url: ${FRONTEND_URL:http://localhost:3001}
   auth:
     username: devuser
     password: devpass123
@@ -33,6 +34,18 @@ app:
   meta:
     app-id: test
     app-secret: test
+    redirect-uri: http://localhost/test
+  facebook:
+    client-id: test
+    client-secret: test
+    redirect-uri: http://localhost/test
+  instagram:
+    client-id: test
+    client-secret: test
+    redirect-uri: http://localhost/test
+  threads:
+    client-id: test
+    client-secret: test
     redirect-uri: http://localhost/test
   tiktok:
     client-key: test

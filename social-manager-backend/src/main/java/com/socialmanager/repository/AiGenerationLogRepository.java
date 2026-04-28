@@ -13,4 +13,6 @@ public interface AiGenerationLogRepository extends JpaRepository<AiGenerationLog
     Optional<AiGenerationLog> findByIdAndUser_Id(UUID id, UUID userId);
 
     List<AiGenerationLog> findByUser_IdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
+
+    List<AiGenerationLog> findByUserIdOrderByCreatedAtDesc(UUID userId);
 }
