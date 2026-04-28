@@ -1,5 +1,6 @@
 import api from "../api/axios";
-import { useState, useEffect } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function Login() {
     enum Platform {
@@ -11,16 +12,30 @@ export default function Login() {
 
     const [form, setForm] = useState({ username: "", password: "" });
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [error, setError] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const navigate = useNavigate();
 
-    const login = async () => {
-        const res = await api.post("/auth/login", form);
-        const token = res.data.data.token;
+    const login = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        setError("");
+        setIsLoading(true);
 
-        localStorage.setItem("token", token);
-        api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+        try {
+            const res = await api.post("/auth/login", form);
+            const token = res.data.data.token;
 
-        setIsLoggedIn(true)
-        alert("Logged in!");
+            localStorage.setItem("token", token);
+            localStorage.setItem("username", form.username);
+            api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+
+            setIsLoggedIn(true);
+            navigate("/dashboard");
+        } catch (err) {
+            setError("Invalid username or password.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleLogin = async (platform: Platform) => {
@@ -44,29 +59,34 @@ export default function Login() {
     }, []);
 
     return (
-        <div style={{ padding: "2rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+        <div style={{ padding: "2rem", display: "flex", flexDirection: "column", gap: "0.75rem", maxWidth: "360px" }}>
             <h1>Login</h1>
+            <p style={{ margin: 0 }}>Use the local demo account: devuser / devpass123.</p>
 
-            <div>
+            <form onSubmit={login} style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                <input
+                    style={{ width: "100%" }}
+                    placeholder="username"
+                    autoComplete="username"
+                    value={form.username}
+                    onChange={(e) => setForm({ ...form, username: e.target.value })}
+                />
 
-            </div>
+                <input
+                    style={{ width: "100%" }}
+                    placeholder="password"
+                    type="password"
+                    autoComplete="current-password"
+                    value={form.password}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                />
 
-            <input
-                style={{width: "fit-content"}}
-                placeholder="username"
-                value={form.username}
-                onChange={(e) => setForm({ ...form, username: e.target.value })}
-            />
+                <button type="submit" style={{ width: "fit-content" }} disabled={isLoading}>
+                    {isLoading ? "Logging in..." : "Login"}
+                </button>
+            </form>
 
-            <input
-                style={{width: "fit-content"}}
-                placeholder="password"
-                type="password"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-            />
-
-            <button style={{width: "fit-content"}} onClick={login}>Login</button>
+            {error && <div role="alert">{error}</div>}
 
             {isLoggedIn && (
                 <div style={{marginTop: "1rem", display: "flex", flexDirection: "column", gap: "0.5rem"}}>

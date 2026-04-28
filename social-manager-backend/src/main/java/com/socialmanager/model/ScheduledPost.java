@@ -32,7 +32,7 @@ public class ScheduledPost {
     // TEXT[] in PostgreSQL
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Array(length = 10)
-    @Column(name = "media_urls", columnDefinition = "TEXT[]")
+    @Column(name = "media_urls")
     private String[] mediaUrls;
 
     @Column(name = "scheduled_time")
@@ -48,6 +48,13 @@ public class ScheduledPost {
 
     @Column(name = "error_message", columnDefinition = "TEXT")
     private String errorMessage;
+
+    @Builder.Default
+    @Column(name = "retry_count", nullable = false)
+    private Integer retryCount = 0;
+
+    @Column(name = "last_attempt_at")
+    private LocalDateTime lastAttemptAt;
 
     @Builder.Default
     @Column(name = "is_auto_pilot")

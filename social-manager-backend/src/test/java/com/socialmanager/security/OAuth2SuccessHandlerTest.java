@@ -1,6 +1,6 @@
 package com.socialmanager.security;
 
-import com.socialmanager.service.AuthService;
+import com.socialmanager.service.auth.AuthService;
 import com.socialmanager.util.JwtUtil;
 import net.jqwik.api.*;
 import net.jqwik.api.constraints.NotBlank;

@@ -1,4 +1,4 @@
-package com.socialmanager.service;
+package com.socialmanager.service.autopilot;
 
 import com.socialmanager.model.AutoPilotConfig;
 import com.socialmanager.model.AutoPilotStatus;

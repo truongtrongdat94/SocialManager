@@ -2,7 +2,6 @@ package com.socialmanager.client;
 
 import com.socialmanager.dto.external.*;
 import com.socialmanager.exception.ExternalApiCallException;
-import com.socialmanager.service.*;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,13 +22,13 @@ import java.nio.charset.StandardCharsets;
 public class InstagramClient {
     private final RestTemplate restTemplate = new RestTemplate();
 
-    @Value("${INSTAGRAM_CLIENT_ID}")
+    @Value("${app.instagram.client-id:${INSTAGRAM_CLIENT_ID:}}")
     private String instagramClientId;
 
-    @Value("${INSTAGRAM_CLIENT_SECRET}")
+    @Value("${app.instagram.client-secret:${INSTAGRAM_CLIENT_SECRET:}}")
     private String instagramClientSecret;
 
-    @Value("${INSTAGRAM_REDIRECT_URI}")
+    @Value("${app.instagram.redirect-uri:${INSTAGRAM_REDIRECT_URI:http://localhost:8080/api/social-accounts/callback/instagram}}")
     private String instagramRedirectUri;
 
     public String getAuthUrl(String stateJwt) {

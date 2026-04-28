@@ -11,6 +11,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -42,34 +43,31 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     "/api/auth/**",
-                    "/api/social-accounts/**",   // cho phép connect FB/Tiktok
+                    "/api/social-accounts/callback/**",
                     "/oauth2/**",
                     "/login/**",
                     "/actuator/health",
-                    "/swagger-ui.html", "/swagger-ui/**",
+                    "/swagger-ui.html",
+                    "/swagger-ui/**",
                     "/v3/api-docs/**"
                 ).permitAll()
-                // Tất cả các API /api/ai/** bây giờ bắt buộc phải có Token mới gọi được
-                .requestMatchers("/api/ai/**").authenticated() 
-                .anyRequest().authenticated()
-            )
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .anyRequest().authenticated())
             .oauth2Login(oauth2 -> oauth2
                 .userInfoEndpoint(userInfo ->
                     userInfo.oidcUserService(customOAuth2UserService))
                 .successHandler(oAuth2SuccessHandler)
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
-
         return http.build();
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        // Cho phép Frontend chạy ở port 3000 hoặc chính server gọi server
-        config.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:8080"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
+        config.setAllowedOriginPatterns(List.of("http://localhost:*", "http://127.0.0.1:*"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin", "*"));
         config.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);

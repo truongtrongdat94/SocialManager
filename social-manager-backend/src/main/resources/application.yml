@@ -27,10 +27,21 @@ spring:
             driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
 
 app:
+  frontend-url: ${FRONTEND_URL:http://localhost:3001}
+  auth:
+    username: ${AUTH_USERNAME:devuser}
+    password: ${AUTH_PASSWORD:devpass123}
+  posting:
+    cron: ${POSTING_CRON:0 */1 * * * ?}
+    batch-size: ${POSTING_BATCH_SIZE:50}
+    max-job-attempts: ${POSTING_MAX_JOB_ATTEMPTS:3}
+    daily-quota: ${POSTING_DAILY_QUOTA:5}
+    max-retries: ${POSTING_MAX_RETRIES:3}
+    retry-backoff-ms: ${POSTING_RETRY_BACKOFF_MS:1000}
   jwt:
     secret: ${JWT_SECRET:dev-secret-key-at-least-64-characters-long-for-local-development-only}
     expiration: ${JWT_EXPIRATION:86400000}
-  aes-secret: ${AES_SECRET:dev-aes-key-32-bytes-1234567890}
+  aes-secret: ${AES_SECRET:12345678901234567890123456789012}
   gemini:
     api-key: ${GEMINI_API_KEY}
     url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent"  
@@ -45,6 +56,18 @@ app:
     app-id: ${META_APP_ID:}
     app-secret: ${META_APP_SECRET:}
     redirect-uri: ${META_REDIRECT_URI:http://localhost:8080/api/auth/callback/meta}
+  facebook:
+    client-id: ${FACEBOOK_CLIENT_ID:${META_APP_ID:}}
+    client-secret: ${FACEBOOK_CLIENT_SECRET:${META_APP_SECRET:}}
+    redirect-uri: ${FACEBOOK_REDIRECT_URI:${META_REDIRECT_URI:http://localhost:8080/api/social-accounts/callback/facebook}}
+  instagram:
+    client-id: ${INSTAGRAM_CLIENT_ID:}
+    client-secret: ${INSTAGRAM_CLIENT_SECRET:}
+    redirect-uri: ${INSTAGRAM_REDIRECT_URI:http://localhost:8080/api/social-accounts/callback/instagram}
+  threads:
+    client-id: ${THREADS_CLIENT_ID:}
+    client-secret: ${THREADS_CLIENT_SECRET:}
+    redirect-uri: ${THREADS_REDIRECT_URI:http://localhost:8080/api/social-accounts/callback/threads}
   tiktok:
     client-key: ${TIKTOK_CLIENT_KEY:}
     client-secret: ${TIKTOK_CLIENT_SECRET:}

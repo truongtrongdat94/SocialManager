@@ -37,7 +37,7 @@ public class PostInsight {
     private BigDecimal engagementRate;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb")
+    @Column
     private String metadata;
 
     @Column(name = "created_at", updatable = false)

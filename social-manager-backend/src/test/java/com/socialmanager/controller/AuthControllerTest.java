@@ -6,7 +6,7 @@ import com.socialmanager.dto.RegisterRequest;
 import com.socialmanager.dto.UserDto;
 import com.socialmanager.exception.GlobalExceptionHandler;
 import com.socialmanager.repository.UserRepository;
-import com.socialmanager.service.AuthService;
+import com.socialmanager.service.auth.AuthService;
 import net.jqwik.api.*;
 import net.jqwik.api.constraints.NotBlank;
 import net.jqwik.api.constraints.StringLength;

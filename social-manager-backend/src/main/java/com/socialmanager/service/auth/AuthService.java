@@ -1,4 +1,4 @@
-package com.socialmanager.service;
+package com.socialmanager.service.auth;
 
 import com.socialmanager.dto.LoginRequest;
 import com.socialmanager.dto.RegisterRequest;

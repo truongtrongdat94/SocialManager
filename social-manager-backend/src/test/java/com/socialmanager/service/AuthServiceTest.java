@@ -5,6 +5,7 @@ import com.socialmanager.dto.RegisterRequest;
 import com.socialmanager.exception.UsernameAlreadyTakenException;
 import com.socialmanager.model.User;
 import com.socialmanager.repository.UserRepository;
+import com.socialmanager.service.auth.AuthService;
 import com.socialmanager.util.JwtUtil;
 import net.jqwik.api.*;
 import net.jqwik.api.constraints.NotBlank;
