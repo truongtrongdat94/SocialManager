@@ -46,6 +46,9 @@ public class ScheduledPost {
     @Column(name = "published_post_id")
     private String publishedPostId;
 
+    @Column(name = "published_post_url", columnDefinition = "TEXT")
+    private String publishedPostUrl;
+
     @Column(name = "error_message", columnDefinition = "TEXT")
     private String errorMessage;
 

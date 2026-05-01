@@ -3,6 +3,7 @@ package com.socialmanager.controller;
 import java.util.Map;
 import java.util.List;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -28,6 +29,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 @RestController
 @RequestMapping("/api/ai")
 @RequiredArgsConstructor
+@ConditionalOnBean({GeminiAIService.class, ImageGenService.class})
 public class AIController {
 
     private final GeminiAIService geminiAIService;

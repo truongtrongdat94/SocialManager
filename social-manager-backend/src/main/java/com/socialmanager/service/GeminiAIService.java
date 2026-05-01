@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity; // 1. Thêm import này
 import org.springframework.http.HttpHeaders;
@@ -27,6 +28,7 @@ import com.socialmanager.repository.AiGenerationLogRepository;
 @RequiredArgsConstructor
 @Slf4j
 @Transactional 
+@ConditionalOnExpression("'${app.gemini.api-key:}'.length() > 0")
 public class GeminiAIService {
 
     @Value("${app.gemini.api-key}")

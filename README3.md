@@ -49,9 +49,27 @@ $env:SPRING_PROFILES_ACTIVE='local'
 
 Use this if you want the full dev stack:
 
+Before running `dev`, export the variables you plan to use in the same terminal session.
+
+```powershell
+$env:GEMINI_API_KEY='your-gemini-key'
+$env:LEONARDO_API_KEY='your-leonardo-key'
+$env:CLOUDINARY_CLOUD_NAME='your-cloud-name'
+$env:CLOUDINARY_API_KEY='your-cloudinary-key'
+$env:CLOUDINARY_API_SECRET='your-cloudinary-secret'
+$env:GOOGLE_CLIENT_ID='your-google-client-id'
+$env:GOOGLE_CLIENT_SECRET='your-google-client-secret'
+```
+
+AI and image generation beans are conditional:
+
+- If Gemini/Leonardo/Cloudinary keys are missing, the backend still starts in `dev`.
+- In that case, AI routes are not loaded until the related keys are provided.
+
 ```powershell
 cd D:\00_Tai_lieu_DH\4.2_Java\Project\SocialManager
 docker compose up -d
+If this fails with a Docker API pipe error, start Docker Desktop first and make sure the Linux engine is running before retrying.
 
 cd .\social-manager-backend
 $env:SPRING_PROFILES_ACTIVE='dev'
@@ -64,17 +82,31 @@ The backend should be available at:
 - `http://localhost:8080/swagger-ui.html`
 - `http://localhost:8080/actuator/health`
 
-## 4. Start the frontend
+## 4. Build and serve the frontend
 
-Open a second terminal:
+The frontend is now built into the Spring Boot static resources folder, so the app is served from the backend on port `8080`.
+
+Build it once after cloning or whenever you change the UI:
 
 ```powershell
 cd D:\00_Tai_lieu_DH\4.2_Java\Project\SocialManager\frontend
 npm.cmd install
+npm.cmd run build
+```
+
+Then open the app through the backend:
+
+- `http://localhost:8080`
+- `http://localhost:8080/swagger-ui.html`
+
+If you want hot reload while developing the UI, you can still run the Vite dev server in a second terminal:
+
+```powershell
+cd D:\00_Tai_lieu_DH\4.2_Java\Project\SocialManager\frontend
 npm.cmd run dev -- --port 3001
 ```
 
-If port `3001` is busy, Vite may pick another port. The backend CORS setup already allows localhost on arbitrary ports.
+In that mode, the frontend runs separately and proxies API calls to `http://localhost:8080`.
 
 ## 5. Sign in
 
@@ -85,7 +117,8 @@ Use the local demo account if you are running the local profile:
 
 Then open the app in your browser and log in:
 
-- `http://localhost:3001/login`
+- `http://localhost:8080/login`
+- or `http://localhost:3001/login` if you are using the Vite dev server
 
 ## 6. Connect a social account
 
@@ -142,6 +175,9 @@ Run these when you want to verify the project manually:
 ```powershell
 cd D:\00_Tai_lieu_DH\4.2_Java\Project\SocialManager\social-manager-backend
 .\mvnw.cmd -q -DskipTests compile
+
+cd D:\00_Tai_lieu_DH\4.2_Java\Project\SocialManager\social-manager-backend
+.\mvnw.cmd test
 
 cd D:\00_Tai_lieu_DH\4.2_Java\Project\SocialManager\frontend
 npm.cmd run build

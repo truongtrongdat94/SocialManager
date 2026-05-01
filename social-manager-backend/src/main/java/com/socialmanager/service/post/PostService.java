@@ -8,7 +8,7 @@ import com.socialmanager.model.SocialAccount;
 import com.socialmanager.repository.ScheduledPostRepository;
 import com.socialmanager.repository.SocialAccountRepository;
 import com.socialmanager.service.account.CurrentUserService;
-import com.socialmanager.service.utils.TokenCryptoService;
+import com.socialmanager.util.EncryptionUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,7 +33,7 @@ public class PostService {
 
     private final ScheduledPostRepository postRepository;
     private final SocialAccountRepository socialAccountRepository;
-    private final TokenCryptoService tokenCryptoService;
+    private final EncryptionUtil encryptionUtil;
     private final CurrentUserService currentUserService;
 
     @Value("${app.posting.daily-quota:5}")
@@ -49,13 +49,13 @@ public class PostService {
         // Quota Check
         checkQuota(account.getId());
 
-        // Decrypt token just to verify it's valid (optional, or do it in Job)
-        tokenCryptoService.decrypt(account.getAccessToken());
+        // Decrypt token just to verify it's valid
+        encryptionUtil.decrypt(account.getAccessToken());
 
         ScheduledPost post = new ScheduledPost();
         post.setUser(account.getUser());
         post.setSocialAccount(account);
-        post.setCaption(request.getContent());
+        post.setCaption(sanitizeCaption(request.getContent()));
         post.setMediaUrls(toMediaUrls(request.getMediaUrl(), request.getMediaUrls()));
         post.setScheduledTime(request.getScheduledTime());
         post.setStatus(STATUS_PENDING);
@@ -73,11 +73,19 @@ public class PostService {
         ScheduledPost mockPost = new ScheduledPost();
         mockPost.setUser(account.getUser());
         mockPost.setSocialAccount(account);
-        mockPost.setCaption(request.getContent());
+        mockPost.setCaption(sanitizeCaption(request.getContent()));
         mockPost.setMediaUrls(toMediaUrls(request.getMediaUrl(), request.getMediaUrls()));
         mockPost.setScheduledTime(request.getScheduledTime());
         mockPost.setStatus(STATUS_PENDING);
         return mapToResponse(mockPost);
+    }
+
+    private String sanitizeCaption(String caption) {
+        if (caption == null) return null;
+        String trimmed = caption.trim();
+        int max = 2000; // defensive cap to avoid DB insert issues
+        if (trimmed.length() <= max) return trimmed;
+        return trimmed.substring(0, max);
     }
 
     // 3. Quota Logic
@@ -108,6 +116,8 @@ public class PostService {
         res.setScheduledTime(post.getScheduledTime());
         res.setStatus(post.getStatus());
         res.setSocialAccountName(post.getSocialAccount().getAccountName());
+        res.setPublishedPostId(post.getPublishedPostId());
+        res.setPublishedPostUrl(resolvePublishedPostUrl(post));
         return res;
     }
 
@@ -224,8 +234,46 @@ public class PostService {
                 "scheduledTime", toIso(post.getScheduledTime()),
                 "lastAttemptAt", toIso(post.getLastAttemptAt()),
                 "publishedPostId", safe(post.getPublishedPostId()),
+                "publishedPostUrl", safe(resolvePublishedPostUrl(post)),
                 "errorMessage", safe(post.getErrorMessage())
         );
+    }
+
+    private String resolvePublishedPostUrl(ScheduledPost post) {
+        if (post == null || post.getPublishedPostId() == null || post.getPublishedPostId().isBlank()) {
+            return null;
+        }
+
+        SocialAccount account = post.getSocialAccount();
+        if (account == null) {
+            return null;
+        }
+
+        String postId = post.getPublishedPostId();
+        Object platform = account.getPlatform();
+
+        if (platform == null) {
+            return null;
+        }
+
+        String platformStr = platform.toString();
+
+        switch (platformStr) {
+            case "FACEBOOK":
+            case "INSTAGRAM":
+            case "THREADS":
+                return "https://facebook.com/" + account.getExternalAccountId() + "/posts/" + postId;
+            case "TIKTOK":
+                String username = account.getAccountName();
+                if (username != null && !username.isBlank()) {
+                    return "https://www.tiktok.com/@" + username + "/video/" + postId;
+                }
+                break;
+            default:
+                break;
+        }
+
+        return null;
     }
 
     private String safe(String value) {

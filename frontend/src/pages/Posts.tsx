@@ -63,6 +63,7 @@ type MonitorItem = {
   scheduledTime: string
   lastAttemptAt: string
   publishedPostId: string
+  publishedPostUrl?: string | null
   errorMessage: string
 }
 
@@ -76,6 +77,7 @@ type PostHistoryItem = {
   scheduledTime: string
   status: string
   publishedPostId: string
+  publishedPostUrl?: string | null
   errorMessage: string
   retryCount: number
   lastAttemptAt: string
@@ -221,14 +223,10 @@ export default function Posts() {
       return
     }
 
-    if (!mediaUrl) {
-      setMediaUrl('https://images.unsplash.com/photo-1523275335684-37898b6baf30')
-    }
-
     if (composeMode === 'MANUAL' && !content) {
       setContent(`Post for ${selectedAccount.accountName ?? selectedAccount.accountAlias ?? selectedAccount.platform}`)
     }
-  }, [composeMode, selectedAccount, content, mediaUrl])
+  }, [composeMode, selectedAccount, content])
 
   const loadAiSources = async () => {
     try {
@@ -240,16 +238,24 @@ export default function Posts() {
     }
   }
 
-  const buildRequest = () => ({
+  const getApiErrorMessage = (err: unknown, fallback: string) => {
+    const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+    if (typeof message === 'string' && message.trim()) {
+      return message
+    }
+    return fallback
+  }
+
+  const buildRequest = (scheduledTimeOverride?: string) => ({
     socialAccountId: selectedAccountId,
     content,
     mediaUrl,
-    scheduledTime,
+    scheduledTime: scheduledTimeOverride ?? scheduledTime,
   })
 
-  const buildAiRequest = () => ({
+  const buildAiRequest = (scheduledTimeOverride?: string) => ({
     socialAccountId: selectedAccountId,
-    scheduledTime,
+    scheduledTime: scheduledTimeOverride ?? scheduledTime,
     aiGenerationLogId: aiGenerationLogId || undefined,
     imageGenerationId: imageGenerationId || undefined,
     contentOverride: content.trim() ? content : undefined,
@@ -267,6 +273,34 @@ export default function Posts() {
   const formatAiOption = (item: AiSourceOption) => {
     const preview = item.contentPreview || '(empty caption)'
     return `${preview} • ${item.mediaCount} media • ${item.createdAt}`
+  }
+
+  const getPublishedPostHref = (
+    platform: Platform | undefined,
+    publishedPostId?: string | null,
+    publishedPostUrl?: string | null,
+  ) => {
+    if (publishedPostUrl && publishedPostUrl.trim()) {
+      return publishedPostUrl
+    }
+
+    if (!publishedPostId || !publishedPostId.trim()) {
+      return ''
+    }
+
+    const safeId = publishedPostId.trim()
+    switch (platform) {
+      case 'FACEBOOK':
+        return `https://www.facebook.com/${safeId}`
+      case 'INSTAGRAM':
+        return `https://www.instagram.com/p/${safeId}/`
+      case 'THREADS':
+        return `https://www.threads.net/post/${safeId}`
+      case 'TIKTOK':
+        return `https://www.tiktok.com/@/video/${safeId}`
+      default:
+        return ''
+    }
   }
 
   const mediaUrlWarning = useMemo(() => {
@@ -318,8 +352,8 @@ export default function Posts() {
         setPreview(response.data.data ?? null)
         setMessage('Preview loaded.')
       }
-    } catch {
-      setError('Cannot load preview right now.')
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Cannot load preview right now.'))
     } finally {
       setSubmitting(false)
     }
@@ -351,8 +385,51 @@ export default function Posts() {
         setMessage('Post scheduled successfully.')
       }
       await loadData()
-    } catch {
-      setError('Cannot schedule post right now.')
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Cannot schedule post right now.'))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handlePostNow = async () => {
+    setSubmitting(true)
+    setError('')
+    setMessage('')
+
+    if (composeMode === 'AI' && !content.trim() && !aiGenerationLogId && !imageGenerationId) {
+      setError('Choose at least one AI source or provide content override.')
+      setSubmitting(false)
+      return
+    }
+
+    const immediateScheduledTime = toLocalDatetimeInputValue(new Date(Date.now() + 60 * 1000))
+
+    try {
+      if (composeMode === 'AI') {
+        const response = await api.post<ApiResponse<AiPostComposeResponse>>(
+          '/posts/ai/schedule',
+          buildAiRequest(immediateScheduledTime),
+        )
+        const payload = response.data.data
+        setPreview(payload?.post ?? null)
+        if (!mediaUrl && payload?.resolvedMediaUrls?.length) {
+          setMediaUrl(payload.resolvedMediaUrls[0])
+        }
+        setMessage(`Post sent to queue for immediate publish (${formatContentSource(payload?.contentSource)}).`)
+      } else {
+        const response = await api.post<ApiResponse<ScheduledPostPreview>>(
+          '/posts/schedule',
+          buildRequest(immediateScheduledTime),
+        )
+        setPreview(response.data.data ?? null)
+        setMessage('Post sent to queue for immediate publish.')
+      }
+
+      setScheduledTime(immediateScheduledTime)
+      await loadData()
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Cannot post right now.'))
     } finally {
       setSubmitting(false)
     }
@@ -526,6 +603,9 @@ export default function Posts() {
               <button type="button" className="ghost-button" onClick={() => void handleSchedule()} disabled={submitting || !selectedAccountId}>
                 Schedule
               </button>
+              <button type="button" className="ghost-button" onClick={() => void handlePostNow()} disabled={submitting || !selectedAccountId}>
+                Post now
+              </button>
             </div>
           </form>
 
@@ -608,9 +688,22 @@ export default function Posts() {
                   <span>{item.scheduledTime}</span>
                 </div>
                 <div className="recent-meta">
-                  <span>Retry {item.retryCount}</span>
-                  <span>{item.autoPilot ? 'Autopilot' : 'Manual'}</span>
-                  {item.publishedPostId ? <span>Published {item.publishedPostId}</span> : null}
+                  {item.retryCount > 0 ? <span>Retry {item.retryCount}</span> : null}
+                  {item.status === 'FAILED' ? <span>{item.autoPilot ? 'Autopilot' : 'Manual'}</span> : null}
+                  {getPublishedPostHref(item.platform, item.publishedPostId, item.publishedPostUrl) ? (
+                    <span>
+                      Published{' '}
+                      <a
+                        href={getPublishedPostHref(item.platform, item.publishedPostId, item.publishedPostUrl)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        View
+                      </a>
+                    </span>
+                  ) : item.publishedPostId ? (
+                    <span>Published {item.publishedPostId}</span>
+                  ) : null}
                   {item.errorMessage ? <span className="error-text">{item.errorMessage}</span> : null}
                   <div className="history-actions">
                     <button type="button" className="ghost-button" onClick={() => setSelectedHistoryId(item.id)}>
@@ -696,7 +789,28 @@ export default function Posts() {
                     <p>{selectedHistoryItem.mediaUrl}</p>
                   </div>
                 ) : null}
-                {selectedHistoryItem.publishedPostId ? (
+                {getPublishedPostHref(
+                  selectedHistoryItem.platform,
+                  selectedHistoryItem.publishedPostId,
+                  selectedHistoryItem.publishedPostUrl,
+                ) ? (
+                  <div>
+                    <span>Published Post</span>
+                    <p>
+                      <a
+                        href={getPublishedPostHref(
+                          selectedHistoryItem.platform,
+                          selectedHistoryItem.publishedPostId,
+                          selectedHistoryItem.publishedPostUrl,
+                        )}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        View on platform
+                      </a>
+                    </p>
+                  </div>
+                ) : selectedHistoryItem.publishedPostId ? (
                   <div>
                     <span>Published Post ID</span>
                     <p>{selectedHistoryItem.publishedPostId}</p>
@@ -746,8 +860,14 @@ export default function Posts() {
                   <span>{item.scheduledTime}</span>
                 </div>
                 <div className="recent-meta">
-                  <span>Retry {item.retryCount}</span>
-                  {item.publishedPostId ? <span>Published {item.publishedPostId}</span> : null}
+                  {item.retryCount > 0 ? <span>Retry {item.retryCount}</span> : null}
+                  {item.publishedPostUrl ? (
+                    <span>
+                      Published <a href={item.publishedPostUrl} target="_blank" rel="noopener noreferrer">View</a>
+                    </span>
+                  ) : item.publishedPostId ? (
+                    <span>Published {item.publishedPostId}</span>
+                  ) : null}
                   {item.errorMessage ? <span className="error-text">{item.errorMessage}</span> : null}
                 </div>
               </div>

@@ -21,7 +21,7 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
     private final JwtUtil jwtUtil;
 
     @Value("${app.frontend-url:http://localhost:3001}")
-    private String frontendUrl;
+    private String frontendUrl = "http://localhost:3000";
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request,

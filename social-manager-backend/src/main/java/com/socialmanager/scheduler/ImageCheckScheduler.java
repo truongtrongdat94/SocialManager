@@ -6,6 +6,7 @@ import com.socialmanager.service.CloudinaryService;
 import com.socialmanager.service.ImageGenService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -14,6 +15,7 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnBean({ImageGenService.class, CloudinaryService.class})
 public class ImageCheckScheduler {
 
     private final ImageGenService imageGenService;

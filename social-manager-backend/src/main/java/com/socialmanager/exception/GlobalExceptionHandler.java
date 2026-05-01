@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-    @Value("${FRONTEND_URL}")
+    @Value("${app.frontend-url:${FRONTEND_URL:http://localhost:3001}}")
     private String frontendUrl;
 
     @ExceptionHandler(BusinessException.class)

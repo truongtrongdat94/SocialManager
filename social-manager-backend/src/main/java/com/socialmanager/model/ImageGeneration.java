@@ -48,7 +48,8 @@ public class ImageGeneration {
     private String[] cloudinaryPublicIds;
 
     @Column(name = "model_id")
-    private String modelId;
+    @Builder.Default
+    private String modelId = "leonardo-ai";
 
     private Integer width;
     private Integer height;

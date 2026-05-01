@@ -11,4 +11,6 @@ public class ScheduledPostResponse {
     private LocalDateTime scheduledTime;
     private String status;
     private String socialAccountName;
+    private String publishedPostId;
+    private String publishedPostUrl;
 }

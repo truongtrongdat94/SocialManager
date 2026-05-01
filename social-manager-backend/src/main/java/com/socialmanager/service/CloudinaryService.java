@@ -5,12 +5,14 @@ import com.cloudinary.utils.ObjectUtils;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
 
 @Service
 @Slf4j
+@ConditionalOnExpression("'${app.cloudinary.cloud-name:}'.length() > 0 && '${app.cloudinary.api-key:}'.length() > 0 && '${app.cloudinary.api-secret:}'.length() > 0")
 public class CloudinaryService {
 
     @Value("${app.cloudinary.cloud-name}")

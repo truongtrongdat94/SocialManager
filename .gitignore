@@ -32,3 +32,9 @@ Thumbs.db
 
 # package
 package-lock.json
+
+# Archive folder for moved/archived sources
+archive/
+
+# Local IDE or environment files
+.env.local

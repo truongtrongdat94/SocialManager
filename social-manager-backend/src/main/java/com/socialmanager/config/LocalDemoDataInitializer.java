@@ -1,7 +1,7 @@
 package com.socialmanager.config;
 
 import com.socialmanager.model.Platform;
-import com.socialmanager.service.utils.TokenCryptoService;
+import com.socialmanager.util.EncryptionUtil;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
@@ -26,7 +26,7 @@ public class LocalDemoDataInitializer implements ApplicationRunner {
     private EntityManager entityManager;
 
     private final JdbcTemplate jdbcTemplate;
-    private final TokenCryptoService tokenCryptoService;
+    private final EncryptionUtil encryptionUtil;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -143,7 +143,7 @@ public class LocalDemoDataInitializer implements ApplicationRunner {
             return;
         }
 
-        String encryptedToken = tokenCryptoService.encrypt("local-demo-token");
+        String encryptedToken = encryptionUtil.encrypt("local-demo-token");
         entityManager.createNativeQuery("""
                 insert into social_accounts (
                     id, user_id, platform, external_account_id, account_alias, account_name,

@@ -3,9 +3,9 @@ package com.socialmanager.job;
 import com.socialmanager.model.ScheduledPost;
 import com.socialmanager.model.SocialAccount;
 import com.socialmanager.repository.ScheduledPostRepository;
-import com.socialmanager.service.post.PlatformApiService; // Assume this handles FB/TikTok posting
+import com.socialmanager.service.post.PlatformApiService;
 import com.socialmanager.service.utils.MediaPreparationService;
-import com.socialmanager.service.utils.TokenCryptoService;
+import com.socialmanager.util.EncryptionUtil;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
@@ -40,7 +40,7 @@ public class AutoPostQuartzJob implements Job {
     private MediaPreparationService mediaPreparationService;
 
     @Autowired
-    private TokenCryptoService tokenCryptoService;
+    private EncryptionUtil encryptionUtil;
 
     @Value("${app.posting.batch-size:50}")
     private int batchSize;
@@ -80,8 +80,8 @@ public class AutoPostQuartzJob implements Job {
         try {
             SocialAccount account = post.getSocialAccount();
             
-            // Decrypt Token (Critical for your part)
-            String decryptedToken = tokenCryptoService.decrypt(account.getAccessToken());
+            // Decrypt Token
+            String decryptedToken = encryptionUtil.decrypt(account.getAccessToken());
                 String platformMediaUrl = mediaPreparationService.preparePrimaryMediaUrl(account.getPlatform(), post.getMediaUrls());
             
             // Call Platform API (Facebook Graph API or TikTok Business API)
@@ -96,7 +96,9 @@ public class AutoPostQuartzJob implements Job {
 
             post.setStatus(STATUS_PUBLISHED);
             post.setPublishedPostId(platformPostId);
-            post.setErrorMessage(null);
+                // attempt to build a public URL for the published post if possible
+                post.setPublishedPostUrl(buildPublishedUrl(account.getPlatform().name(), account.getExternalAccountId(), platformPostId));
+                post.setErrorMessage(null);
             
         } catch (Exception e) {
             log.severe("Failed to publish scheduled post " + post.getId() + ": " + e.getMessage());
@@ -109,6 +111,37 @@ public class AutoPostQuartzJob implements Job {
         }
         
         postRepository.save(post);
+    }
+
+    private String buildPublishedUrl(String platform, String externalAccountId, String platformPostId) {
+        if (platformPostId == null || platformPostId.isBlank()) return null;
+        try {
+            switch (platform.toUpperCase()) {
+                case "FACEBOOK":
+                    // If id looks like pageId_postId
+                    if (platformPostId.contains("_")) {
+                        String[] parts = platformPostId.split("_");
+                        if (parts.length >= 2) {
+                            return "https://www.facebook.com/" + parts[0] + "/posts/" + parts[1];
+                        }
+                    }
+                    return "https://www.facebook.com/" + platformPostId;
+                case "INSTAGRAM":
+                case "THREADS":
+                    // Cannot reliably map numeric ids to shortcodes; return null
+                    return null;
+                case "TIKTOK":
+                    // If externalAccountId looks like username, construct a likely URL
+                    if (externalAccountId != null && !externalAccountId.isBlank()) {
+                        return "https://www.tiktok.com/" + externalAccountId + "/video/" + platformPostId;
+                    }
+                    return null;
+                default:
+                    return null;
+            }
+        } catch (Exception ex) {
+            return null;
+        }
     }
 
 }
