@@ -38,3 +38,6 @@ archive/
 
 # Local IDE or environment files
 .env.local
+
+# Ignore built frontend static assets served by the backend
+social-manager-backend/src/main/resources/static/
