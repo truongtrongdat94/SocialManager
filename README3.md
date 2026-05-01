@@ -59,6 +59,9 @@ $env:CLOUDINARY_API_KEY='your-cloudinary-key'
 $env:CLOUDINARY_API_SECRET='your-cloudinary-secret'
 $env:GOOGLE_CLIENT_ID='your-google-client-id'
 $env:GOOGLE_CLIENT_SECRET='your-google-client-secret'
+$env:TIKTOK_CLIENT_KEY='your-tiktok-client-key'
+$env:TIKTOK_CLIENT_SECRET='your-tiktok-client-secret'
+$env:TIKTOK_REDIRECT_URI='https://overnight-drained-coffee.ngrok-free.dev/api/social-accounts/callback/tiktok'
 ```
 
 AI and image generation beans are conditional:
@@ -75,6 +78,22 @@ cd .\social-manager-backend
 $env:SPRING_PROFILES_ACTIVE='dev'
 .\mvnw.cmd spring-boot:run
 ```
+
+For TikTok OAuth, the redirect URI must match exactly in three places:
+
+- TikTok developer console: `https://overnight-drained-coffee.ngrok-free.dev/api/social-accounts/callback/tiktok`
+- Backend environment: `TIKTOK_REDIRECT_URI=https://overnight-drained-coffee.ngrok-free.dev/api/social-accounts/callback/tiktok`
+- The app callback route: `/api/social-accounts/callback/tiktok`
+
+If TikTok sign-in fails, the most common cause is a redirect URI mismatch, using the `local` profile, or the ngrok tunnel not running.
+
+Keep ngrok open in a separate terminal while you test TikTok OAuth. The tunnel should forward to your backend on port 8080, for example:
+
+```powershell
+ngrok http 8080
+```
+
+If the ngrok page shows `ERR_NGROK_3200`, the tunnel is offline and TikTok cannot reach your backend until ngrok is restarted.
 
 The backend should be available at:
 
