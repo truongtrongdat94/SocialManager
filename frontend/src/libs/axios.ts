@@ -1,11 +1,11 @@
 import axios from "axios";
 
-const api = axios.create({
+const axiosInstance = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api",
 });
 
 // Attach JWT token to every request
-api.interceptors.request.use((config) => {
+axiosInstance.interceptors.request.use((config) => {
     const token = localStorage.getItem("token");
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -14,7 +14,7 @@ api.interceptors.request.use((config) => {
 });
 
 // Redirect to login on 401
-api.interceptors.response.use(
+axiosInstance.interceptors.response.use(
     (res) => res,
     (err) => {
         if (err.response?.status === 401) {
@@ -25,4 +25,4 @@ api.interceptors.response.use(
     },
 );
 
-export default api;
+export default axiosInstance;
