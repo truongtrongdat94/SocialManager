@@ -1,0 +1,151 @@
+@import "tailwindcss";
+
+@theme {
+    --color-primary-50: #f6f5fd;
+    --color-primary-100: #eeecfb;
+    --color-primary-200: #dedcf8;
+    --color-primary-300: #c6c0f2;
+    --color-primary-400: #a99de8;
+    --color-primary-500: #8c75dd;
+    --color-primary-600: #6f4acd;
+    --color-primary-700: #6944bd;
+    --color-primary-800: #58399e;
+    --color-primary-900: #493082;
+    --color-primary-950: #2d1e57;
+
+    --color-bg: #f7f8fa;
+
+    --color-surface-primary: white;
+    --color-surface-secondary: #f6f6f6;
+    --color-surface-tertiary: #f3f4f5;
+
+    --color-border: #e9e9e9;
+    --color-divider: #e9e9e9;
+    --color-border-elevation: transparent;
+
+    --color-text-primary: #4d5154;
+    --color-text-secondary: #7a7c7f;
+    --color-text-tertiary: #a6a8a9;
+
+    --color-accent: var(--color-primary-600);
+
+    /*Buttons*/
+    /*Default*/
+    --color-button-soft-default-bg: var(--color-gray-100);
+    --color-button-soft-default-bg-hover: var(--color-gray-200);
+    --color-button-soft-default-text: var(--color-text-primary);
+
+    --color-button-outline-default-bg: transparent;
+    --color-button-outline-default-bg-hover: var(--color-gray-200);
+    --color-button-outline-default-text: var(--color-text-primary);
+    --color-button-outline-default-border: var(--color-border);
+
+    /*Primary*/
+    --color-button-solid-primary-bg: var(--color-primary-600);
+    --color-button-solid-primary-bg-hover: var(--color-primary-700);
+    --color-button-solid-primary-text: white;
+
+    --color-button-soft-primary-bg: var(--color-primary-100);
+    --color-button-soft-primary-bg-hover: var(--color-primary-200);
+    --color-button-soft-primary-text: var(--color-primary-600);
+
+    --color-button-outline-primary-bg: transparent;
+    --color-button-outline-primary-bg-hover: var(--color-primary-100);
+    --color-button-outline-primary-text: var(--color-primary-600);
+    --color-button-outline-primary-border: var(--color-primary-600);
+
+    /*Danger*/
+    --color-button-solid-danger-bg: var(--color-red-600);
+    --color-button-solid-danger-bg-hover: var(--color-red-700);
+    --color-button-solid-danger-text: white;
+
+    --color-button-soft-danger-bg: var(--color-red-100);
+    --color-button-soft-danger-bg-hover: var(--color-red-200);
+    --color-button-soft-danger-text: var(--color-red-600);
+
+    --color-button-outline-danger-bg: transparent;
+    --color-button-outline-danger-bg-hover: var(--color-red-100);
+    --color-button-outline-danger-text: var(--color-red-600);
+    --color-button-outline-danger-border: var(--color-red-600);
+
+    /*Info*/
+    --color-button-solid-info-bg: var(--color-sky-600);
+    --color-button-solid-info-bg-hover: var(--color-sky-700);
+    --color-button-solid-info-text: white;
+
+    --color-button-soft-info-bg: var(--color-sky-100);
+    --color-button-soft-info-bg-hover: var(--color-sky-200);
+    --color-button-soft-info-text: var(--color-sky-600);
+
+    --color-button-outline-info-bg: transparent;
+    --color-button-outline-info-bg-hover: var(--color-sky-100);
+    --color-button-outline-info-text: var(--color-sky-600);
+    --color-button-outline-info-border: var(--color-sky-600);
+
+    /*Success*/
+    --color-button-solid-success-bg: var(--color-emerald-600);
+    --color-button-solid-success-bg-hover: var(--color-emerald-700);
+    --color-button-solid-success-text: white;
+
+    --color-button-soft-success-bg: var(--color-emerald-100);
+    --color-button-soft-success-bg-hover: var(--color-emerald-200);
+    --color-button-soft-success-text: var(--color-emerald-600);
+
+    --color-button-outline-success-bg: transparent;
+    --color-button-outline-success-bg-hover: var(--color-emerald-100);
+    --color-button-outline-success-text: var(--color-emerald-600);
+    --color-button-outline-success-border: var(--color-emerald-600);
+
+    --color-shadow: rgba(15, 23, 42, 0.09);
+
+    --shadow-sidebar: 1px 0 4px -1px var(--color-shadow);
+    --shadow-card: 0 2px 5px 0 var(--color-shadow);
+
+    --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+    * {
+        font-feature-settings: "liga" 0;
+    }
+
+    .dark {
+        --color-bg: #1d2b3f;
+
+        --color-surface-primary: #172437;
+        --color-surface-secondary: #212d3e;
+        --color-surface-tertiary: #1e2a3d;
+
+        --color-border: #364760;
+        --color-divider: #364760;
+        --color-border-elevation: var(--color-border);
+
+        --color-text-primary: #dadde0;
+        --color-text-secondary: #909aa1;
+        --color-text-tertiary: #616b77;
+
+        --color-accent: var(--color-primary-400);
+
+        --color-button-outline-default-bg-hover: var(--color-gray-700);
+        --color-button-outline-default-text: var(--color-text-primary);
+
+        --color-button-outline-primary-bg-hover: color-mix(in srgb, var(--color-primary-900) 70%, transparent);
+        --color-button-outline-primary-text: var(--color-primary-400);
+        --color-button-outline-primary-border: var(--color-primary-400);
+
+        --color-button-outline-danger-bg-hover: color-mix(in srgb, var(--color-red-900) 70%, transparent);
+        --color-button-outline-danger-text: var(--color-red-400);
+        --color-button-outline-danger-border: var(--color-red-400);
+
+        --color-button-outline-info-bg-hover: color-mix(in srgb, var(--color-sky-800) 70%, transparent);
+        --color-button-outline-info-text: var(--color-sky-400);
+        --color-button-outline-info-border: var(--color-sky-400);
+
+        --color-button-outline-success-bg-hover: color-mix(in srgb, var(--color-emerald-800) 70%, transparent);
+        --color-button-outline-success-text: var(--color-emerald-400);
+        --color-button-outline-success-border: var(--color-emerald-400);
+
+        --shadow-card: none;
+        --shadow-sidebar: none;
+    }
+}
