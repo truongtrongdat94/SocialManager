@@ -41,3 +41,9 @@ archive/
 
 # Ignore built frontend static assets served by the backend
 social-manager-backend/src/main/resources/static/
+
+# Ignore auxiliary README files that should not be pushed
+/README2.md
+/README3.md
+SocialManager-upstream/README.md
+SocialManager.worktrees/**/README.md
