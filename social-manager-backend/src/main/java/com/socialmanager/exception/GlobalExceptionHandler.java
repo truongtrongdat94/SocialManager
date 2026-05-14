@@ -3,6 +3,7 @@ package com.socialmanager.exception;
 import com.socialmanager.dto.ApiResponse;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -29,6 +30,26 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleConflict(UsernameAlreadyTakenException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        String message = "Dữ liệu không hợp lệ";
+        
+        // Parse constraint violation to provide user-friendly message
+        String exceptionMessage = ex.getMessage();
+        if (exceptionMessage != null) {
+            if (exceptionMessage.contains("email") || exceptionMessage.contains("Email")) {
+                message = "Email đã được sử dụng";
+            } else if (exceptionMessage.contains("username") || exceptionMessage.contains("Username")) {
+                message = "Tên đăng nhập đã tồn tại";
+            } else if (exceptionMessage.contains("duplicate key")) {
+                message = "Dữ liệu đã tồn tại trong hệ thống";
+            }
+        }
+        
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(message));
     }
 
     @ExceptionHandler(BadCredentialsException.class)
