@@ -6,3 +6,4 @@ export { default as Card } from "./Card.tsx";
 export { default as Dropdown, type DropdownZone } from "./Dropdown.tsx";
 export { default as FileInput } from "./FileInput.tsx";
 export { default as Modal } from "./Modal.tsx";
+export { ProtectedRoute } from "./ProtectedRoute.tsx";

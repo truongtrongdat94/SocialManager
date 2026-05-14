@@ -2,6 +2,9 @@ import { Button, Dropdown, type DropdownZone } from "@/components";
 import { EllipsisVertical, Globe, Send, ChartColumn, LogOut, Pencil, User } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { cn } from "@/utils";
+import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
+import AuthApi from "@/apis/auth.api.ts";
 
 const sideBarButtons = [
 	{
@@ -21,29 +24,53 @@ const sideBarButtons = [
 	},
 ];
 
-const actionZones: DropdownZone[] = [
-	{
-		actions: [
-			{
-				label: "Chỉnh sửa thông tin",
-				icon: <Pencil size={16} strokeWidth={1.5} />,
-				variant: "info",
-				onClick: () => {},
-			},
-			{
-				label: "Đăng xuất",
-				icon: <LogOut size={16} strokeWidth={1.5} />,
-				variant: "danger",
-				onClick: () => {},
-			},
-		],
-	}
-];
-
 export const DashboardLayout = () => {
 	const { pathname } = useLocation();
 	const navigate = useNavigate();
 	const isActive = (path: string) => pathname.includes(path);
+	const [user, setUser] = useState<{ name: string; username: string } | null>(null);
+
+	useEffect(() => {
+		// Lấy thông tin user khi component mount
+		const fetchUser = async () => {
+			try {
+				const response = await AuthApi.getMe();
+				setUser({
+					name: response.data.data.name,
+					username: response.data.data.username,
+				});
+			} catch (error) {
+				console.error("Failed to fetch user:", error);
+			}
+		};
+
+		fetchUser();
+	}, []);
+
+	const handleLogout = () => {
+		localStorage.removeItem("token");
+		toast.success("Đã đăng xuất");
+		navigate("/login");
+	};
+
+	const actionZones: DropdownZone[] = [
+		{
+			actions: [
+				{
+					label: "Chỉnh sửa thông tin",
+					icon: <Pencil size={16} strokeWidth={1.5} />,
+					variant: "info",
+					onClick: () => {},
+				},
+				{
+					label: "Đăng xuất",
+					icon: <LogOut size={16} strokeWidth={1.5} />,
+					variant: "danger",
+					onClick: handleLogout,
+				},
+			],
+		}
+	];
 
 	return (
 		<div className="flex h-screen w-full text-text-primary bg-bg p-4 gap-8">
@@ -85,8 +112,8 @@ export const DashboardLayout = () => {
 									<User strokeWidth={1.5} size={20} />
 								</div>
 								<div className="flex flex-col min-w-0 flex-1">
-									<div className="text-left font-semibold truncate">Tên hiển thị</div>
-									<div className="text-sm text-left text-text-secondary">@username</div>
+									<div className="text-left font-semibold truncate">{user?.name || "Loading..."}</div>
+									<div className="text-sm text-left text-text-secondary">@{user?.username || "..."}</div>
 								</div>
 							</Button>
 						}
