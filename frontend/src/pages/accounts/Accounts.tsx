@@ -1,6 +1,10 @@
+import { useEffect } from "react";
+import { useSearchParams } from "react-router";
+import toast from "react-hot-toast";
 import { Button } from "@/components";
 import { useSocialAccountStore, useModalStore } from "@/stores";
 import { AddSocialAccountModal } from "./components/AddSocialAccountModal.tsx";
+import { DeleteSocialAccountModal } from "./components/DeleteSocialAccountModal.tsx";
 
 import {
 	icons,
@@ -13,23 +17,28 @@ import {
 } from "lucide-react";
 
 export const Accounts = () => {
-	const accounts = useSocialAccountStore(
-		(state) => state.accounts
-	);
+	const accounts = useSocialAccountStore((s) => s.accounts);
+	const fetchAccounts = useSocialAccountStore((s) => s.fetchAccounts);
+	const openModal = useModalStore((s) => s.open);
 
-	const openModal = useModalStore(
-		(state) => state.open
-	);
+	const [searchParams, setSearchParams] = useSearchParams();
 
-	const handleReconnect = (
-		id: string
-	) => {
-		console.log("Reconnect:", id);
-	};
+	useEffect(() => {
+		const status = searchParams.get("status");
 
-	const handleDelete = (id: string) => {
-		console.log("Delete:", id);
-	};
+		if (status === "success") {
+			toast.success("Kết nối tài khoản thành công!");
+		} else if (status === "error") {
+			toast.error("Đã xảy ra lỗi khi kết nối!");
+		}
+
+		if (status) {
+			searchParams.delete("status");
+			setSearchParams(searchParams, { replace: true });
+		}
+
+		void fetchAccounts();
+	}, []);
 
 	return (
 		<div className="flex h-full flex-col gap-4">
@@ -55,6 +64,15 @@ export const Accounts = () => {
 				</Button>
 			</div>
 
+			<Button
+				variant="outline"
+				color="primary"
+				className="w-fit"
+				onClick={fetchAccounts}
+			>
+				Tải lại
+			</Button>
+
 			<div className="max-h-full overflow-y-auto rounded-xl border border-border bg-surface-primary shadow-card">
 				<table className="w-full border-collapse">
 					<thead className="sticky top-0 bg-surface-secondary">
@@ -73,7 +91,7 @@ export const Accounts = () => {
 							>
 								<td className="px-4 py-3">
 									<div className="flex items-center gap-2">
-										<img src={account.profilePictureUrl} alt={account.accountName} className="h-10 w-10 rounded-full object-cover"/>
+										<img src={account.profilePictureUrl} alt="" className="h-10 w-10 rounded-full object-cover"/>
 
 										<div className="font-medium">
 											{account.accountName}
@@ -92,13 +110,17 @@ export const Accounts = () => {
 
 								<td className="px-4 py-3">
 									<div className="flex items-center gap-2">
-										<Button title="Kết nối lại" variant="soft" color="primary" className="h-8 w-8 p-0"
-										        onClick={() => handleReconnect(account.id)}>
+										<Button title="Kết nối lại" variant="soft" color="primary" className="h-8 w-8 p-0">
 											<RefreshCw size={16} strokeWidth={1.5}/>
 										</Button>
 
-										<Button title="Xoá" variant="soft" color="danger" className="h-8 w-8 p-0" onClick={() => handleDelete(account.id)}
-										>
+										<Button title="Xoá" variant="soft" color="danger" className="h-8 w-8 p-0"
+										        onClick={() =>
+											        openModal(
+												        "Xác nhận xoá",
+												        <DeleteSocialAccountModal accountId={account.id} accountName={account.accountName}/>
+											        )
+										        }>
 											<Trash2 size={16} strokeWidth={1.5}/>
 										</Button>
 									</div>

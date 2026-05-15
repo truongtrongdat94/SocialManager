@@ -1,8 +1,6 @@
 import { createBrowserRouter, RouterProvider, Navigate } from "react-router";
-import { Toaster } from "react-hot-toast";
+import { Toaster, toast, ToastBar } from "react-hot-toast";
 import { AuthLayout, DashboardLayout } from "@/layouts";
-import Success from "@/pages/Success";
-import Failed from "@/pages/Failed.tsx";
 import { Accounts, Post, Stats, Login, Register, AuthCallback } from "@/pages";
 import { Modal, ProtectedRoute } from "@/components";
 
@@ -28,8 +26,6 @@ const router = createBrowserRouter([
 			{ path: "stats", element: <Stats /> },
 		],
 	},
-	{ path: "/success", element: <Success /> },
-	{ path: "/failed", element: <Failed /> },
 	{ path: "/", element: <Navigate to="/dashboard/accounts" replace /> },
 	{ path: "*", element: <Navigate to="/dashboard/accounts" replace /> },
 ]);
@@ -61,7 +57,16 @@ function App() {
 						},
 					},
 				}}
-			/>
+			>
+				{(t) => (
+					<div
+						onClick={() => toast.dismiss(t.id)}
+						style={{ cursor: 'pointer' }}
+					>
+						<ToastBar toast={t} />
+					</div>
+				)}
+			</Toaster>
 			<Modal />
 		</>
 	);
