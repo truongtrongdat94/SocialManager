@@ -69,7 +69,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({OAuthCallbackException.class, CsrfSecurityException.class})
     public void handleOAuthErrors(RuntimeException ex, HttpServletResponse response) throws IOException {
-        response.sendRedirect(frontendUrl + "/failed");
+        response.sendRedirect(frontendUrl + "/dashboard/accounts?status=error");
     }
 
     @ExceptionHandler(AccessDeniedException.class)
