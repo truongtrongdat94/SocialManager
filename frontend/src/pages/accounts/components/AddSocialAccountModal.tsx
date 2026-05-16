@@ -27,6 +27,13 @@ export const AddSocialAccountModal = () => {
 	const handleConnect = async (platform: string) => {
 		setError("");
 		setLoadingPlatform(platform);
+		const token = localStorage.getItem("token");
+		if (!token) {
+			setError("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+			setLoadingPlatform("");
+			window.location.href = "/login";
+			return;
+		}
 		try {
 			const response = await axiosInstance.get<{ data: string }>(`/social-accounts/connect/${platform.toUpperCase()}`);
 			const url = response.data.data;

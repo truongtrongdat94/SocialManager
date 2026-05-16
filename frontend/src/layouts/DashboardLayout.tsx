@@ -1,5 +1,6 @@
 import { Button, Dropdown, type DropdownZone } from "@/components";
 import { EllipsisVertical, Globe, Send, ChartColumn, LogOut, Pencil, User, Wrench } from "lucide-react";
+import { useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { cn } from "@/utils";
 
@@ -26,29 +27,42 @@ const sideBarButtons = [
 	},
 ];
 
-const actionZones: DropdownZone[] = [
-	{
-		actions: [
-			{
-				label: "Chỉnh sửa thông tin",
-				icon: <Pencil size={16} strokeWidth={1.5} />,
-				variant: "info",
-				onClick: () => {},
-			},
-			{
-				label: "Đăng xuất",
-				icon: <LogOut size={16} strokeWidth={1.5} />,
-				variant: "danger",
-				onClick: () => {},
-			},
-		],
-	}
-];
-
 export const DashboardLayout = () => {
 	const { pathname } = useLocation();
 	const navigate = useNavigate();
+
+	useEffect(() => {
+		const token = localStorage.getItem("token");
+		if (!token) {
+			navigate("/login", { replace: true });
+		}
+	}, [navigate]);
+
+	const handleLogout = () => {
+		localStorage.removeItem("token");
+		localStorage.removeItem("username");
+		navigate("/login", { replace: true });
+	};
+
 	const isActive = (path: string) => pathname.includes(path);
+	const profileActions: DropdownZone[] = [
+		{
+			actions: [
+				{
+					label: "Chỉnh sửa thông tin",
+					icon: <Pencil size={16} strokeWidth={1.5} />,
+					variant: "info",
+					onClick: () => {},
+				},
+				{
+					label: "Đăng xuất",
+					icon: <LogOut size={16} strokeWidth={1.5} />,
+					variant: "danger",
+					onClick: handleLogout,
+				},
+			],
+		}
+	];
 
 	return (
 		<div className="flex h-screen w-full text-text-primary bg-bg p-4 gap-8">
@@ -95,7 +109,7 @@ export const DashboardLayout = () => {
 								</div>
 							</Button>
 						}
-						zones={actionZones}
+						zones={profileActions}
 					/>
 				</div>
 
