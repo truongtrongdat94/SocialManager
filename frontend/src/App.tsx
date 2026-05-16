@@ -1,25 +1,43 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Dashboard from "./pages/Dashboard";
-import Login from "./pages/Login";
-import AuthCallback from "./pages/AuthCallback";
-import Success from "./pages/Success";
-import Failed from "./pages/Failed.tsx";
-import Posts from "./pages/Posts";
+import { createBrowserRouter, RouterProvider, Navigate } from "react-router";
+import { AuthLayout, DashboardLayout } from "@/layouts";
+import Success from "@/pages/Success";
+import Failed from "@/pages/Failed.tsx";
+import AuthCallback from "@/pages/AuthCallback";
+import { Accounts, Post, Stats, SetupGuide, Login, Register } from "@/pages";
+import { Modal } from "@/components";
+
+const router = createBrowserRouter([
+	{
+		element: <AuthLayout />,
+		children: [
+			{ path: "/login", element: <Login /> },
+			{ path: "/register", element: <Register /> },
+		],
+	},
+	{ path: "/auth/callback", element: <AuthCallback /> },
+	{
+		path: "/dashboard",
+		element: <DashboardLayout />,
+		children: [
+			{ path: "accounts", element: <Accounts /> },
+			{ path: "post", element: <Post /> },
+			{ path: "stats", element: <Stats /> },
+			{ path: "setup", element: <SetupGuide /> },
+		],
+	},
+	{ path: "/success", element: <Success /> },
+	{ path: "/failed", element: <Failed /> },
+	{ path: "*", element: <Navigate to="/dashboard/accounts" replace /> },
+]);
 
 function App() {
-    return (
-        <BrowserRouter>
-            <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/auth/callback" element={<AuthCallback />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/posts" element={<Posts />} />
-                <Route path="/success" element={<Success />} />
-                <Route path="/failed" element={<Failed />} />
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
-            </Routes>
-        </BrowserRouter>
-    );
+	return (
+		<>
+			<RouterProvider router={router} />
+
+			<Modal />
+		</>
+	);
 }
 
 export default App;
