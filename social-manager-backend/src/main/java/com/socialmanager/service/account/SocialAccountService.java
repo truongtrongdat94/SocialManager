@@ -76,6 +76,10 @@ public class SocialAccountService {
         List<Page> pages = facebookClient.fetchFacebookPages(tokenResponse.accessToken());
         System.out.println("Page list: " + pages);
 
+        if (pages == null || pages.isEmpty()) {
+            throw new RuntimeException("Facebook login succeeded but no Page was returned. Make sure this account has at least one Facebook Page and granted pages permissions.");
+        }
+
         for (Page page : pages) {
             saveSocialAccountToDatabase(user, Platform.FACEBOOK, page.id(), page.name(), page.name(), page.pictureUrl(), page.pageToken(), null, null);
         }

@@ -13,6 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -51,12 +53,26 @@ public class SocialAccountController {
     @Value("${app.tiktok.client-secret:${TIKTOK_CLIENT_SECRET:}}")
     private String tiktokClientSecret;
 
+    @Value("${app.cloudinary.cloud-name:${CLOUDINARY_CLOUD_NAME:}}")
+    private String cloudinaryCloudName;
+
+    @Value("${app.cloudinary.api-key:${CLOUDINARY_API_KEY:}}")
+    private String cloudinaryApiKey;
+
+    @Value("${app.cloudinary.api-secret:${CLOUDINARY_API_SECRET:}}")
+    private String cloudinaryApiSecret;
+
     private String frontendPath(String path) {
         return frontendUrl + path;
     }
 
     private boolean hasValue(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private void redirectFailed(HttpServletResponse response, String reason) throws Exception {
+        String encodedReason = URLEncoder.encode(reason, StandardCharsets.UTF_8);
+        response.sendRedirect(frontendPath("/failed?reason=" + encodedReason));
     }
 
     @GetMapping("/connect/{platform}")
@@ -72,7 +88,8 @@ public class SocialAccountController {
             "facebook", hasValue(facebookClientId) && hasValue(facebookClientSecret),
             "instagram", hasValue(instagramClientId) && hasValue(instagramClientSecret),
             "threads", hasValue(threadsClientId) && hasValue(threadsClientSecret),
-            "tiktok", hasValue(tiktokClientKey) && hasValue(tiktokClientSecret)
+            "tiktok", hasValue(tiktokClientKey) && hasValue(tiktokClientSecret),
+            "cloudinary", hasValue(cloudinaryCloudName) && hasValue(cloudinaryApiKey) && hasValue(cloudinaryApiSecret)
         )));
     }
 
@@ -84,18 +101,22 @@ public class SocialAccountController {
         HttpServletResponse response
     ) throws Exception {
         if (error != null) {
-            response.sendRedirect(frontendPath("/failed"));
+            redirectFailed(response, "Facebook returned an OAuth error: " + error);
             return;
         }
 
         if (code == null || state == null) {
-            response.sendRedirect(frontendPath("/failed"));
+            redirectFailed(response, "Missing OAuth code/state in Facebook callback");
             return;
         }
 
-        String username = jwtUtil.getUsernameFromToken(state);
-        socialAccountService.connectFacebookAccount(code, username);
-        response.sendRedirect(frontendPath("/success"));
+        try {
+            String username = jwtUtil.getUsernameFromToken(state);
+            socialAccountService.connectFacebookAccount(code, username);
+            response.sendRedirect(frontendPath("/success"));
+        } catch (Exception ex) {
+            redirectFailed(response, ex.getMessage() != null ? ex.getMessage() : "Facebook connection failed");
+        }
     }
 
     @GetMapping("/callback/instagram")
