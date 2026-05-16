@@ -21,14 +21,22 @@ public class PostInsight {
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "scheduled_post_id", nullable = false)
+    @JoinColumn(name = "scheduled_post_id", nullable = true)
     private ScheduledPost scheduledPost;
 
     private String platform;
     private LocalDate date;
     private Integer impressions;
+    private Integer engagedUsers;
     private Integer reach;
     private Integer likes;
+    private Integer likeCount;
+    private Integer loveCount;
+    private Integer hahaCount;
+    private Integer wowCount;
+    private Integer sadCount;
+    private Integer angryCount;
+    private Integer careCount;
     private Integer comments;
     private Integer shares;
     private Integer saves;
@@ -47,4 +55,7 @@ public class PostInsight {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
     }
+
+    @Column(name = "post_id")
+    private String postId;
 }

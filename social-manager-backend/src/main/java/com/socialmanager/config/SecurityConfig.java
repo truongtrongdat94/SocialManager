@@ -66,7 +66,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     "/api/auth/**",
-                    "/api/social-accounts/**",   //  cho phép connect FB/Tiktok
+                    "/api/social-accounts/**", //  cho phép connect FB/Tiktok
+                    "/api/insights/**",
                     "/oauth2/**",
                     "/login/**",
                     "/actuator/health",

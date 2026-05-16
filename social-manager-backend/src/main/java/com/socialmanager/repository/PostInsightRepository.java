@@ -5,10 +5,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface PostInsightRepository extends JpaRepository<PostInsight, UUID> {
 
     List<PostInsight> findByDate(LocalDate date);
-
+    Optional<PostInsight> findByPostIdAndDate(String postId, LocalDate date);
 }
