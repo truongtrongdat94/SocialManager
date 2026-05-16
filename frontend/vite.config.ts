@@ -1,8 +1,13 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from "vite";
+import { resolve } from "path";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+      react(),
+      tailwindcss()
+  ],
   build: {
     outDir: '../social-manager-backend/src/main/resources/static',
     emptyOutDir: true,
@@ -16,4 +21,9 @@ export default defineConfig({
       },
     },
   },
+  resolve: {
+    alias: {
+      "@": resolve(__dirname, "src/")
+    }
+  }
 })
