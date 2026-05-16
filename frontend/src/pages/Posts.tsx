@@ -1,22 +1,10 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import type { ChangeEvent, FormEvent } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import api from '../api/axios'
+import usePostStore from '@/stores/usePostStore'
 
 type Platform = 'FACEBOOK' | 'INSTAGRAM' | 'THREADS' | 'TIKTOK'
 
-type SocialAccount = {
-  id: string
-  platform: Platform
-  accountName?: string | null
-  accountAlias?: string | null
-  autoPilot: boolean
-}
-
-type ApiResponse<T> = {
-  success: boolean
-  message: string
-  data: T
-}
 
 type ComposeMode = 'MANUAL' | 'AI'
 
@@ -27,104 +15,67 @@ type AiSourceOption = {
   createdAt: string
 }
 
-type AiPostSourcesResponse = {
-  aiGenerationLogs: AiSourceOption[]
-  imageGenerations: AiSourceOption[]
-}
 
-type AiPostComposeResponse = {
-  post: ScheduledPostPreview
-  contentSource: string
-  resolvedMediaUrls: string[]
-  aiGenerationLogId?: string
-  imageGenerationId?: string
-}
+ 
 
-type ScheduledPostPreview = {
-  id: string
-  content: string
-  mediaUrl: string
-  scheduledTime: string
-  status: string
-  socialAccountName: string
-}
 
-type MonitorSummary = {
-  pending: number
-  processing: number
-  posted: number
-  failed: number
-}
 
-type MonitorItem = {
-  id: string
-  status: string
-  retryCount: number
-  scheduledTime: string
-  lastAttemptAt: string
-  publishedPostId: string
-  publishedPostUrl?: string | null
-  errorMessage: string
-}
-
-type PostHistoryItem = {
-  id: string
-  socialAccountId: string
-  socialAccountName: string
-  platform: Platform
-  content: string
-  mediaUrl: string
-  scheduledTime: string
-  status: string
-  publishedPostId: string
-  publishedPostUrl?: string | null
-  errorMessage: string
-  retryCount: number
-  lastAttemptAt: string
-  autoPilot: boolean
-  createdAt: string
-}
-
-type PagedHistoryResponse = {
-  items: PostHistoryItem[]
-  total: number
-  page: number
-  size: number
-  hasNext: boolean
-}
 
 export default function Posts() {
   const navigate = useNavigate()
   const hasAuth = Boolean(localStorage.getItem('token'))
 
-  const [accounts, setAccounts] = useState<SocialAccount[]>([])
-  const [composeMode, setComposeMode] = useState<ComposeMode>('MANUAL')
-  const [aiGenerationLogId, setAiGenerationLogId] = useState('')
-  const [imageGenerationId, setImageGenerationId] = useState('')
-  const [aiGenerationOptions, setAiGenerationOptions] = useState<AiSourceOption[]>([])
-  const [imageGenerationOptions, setImageGenerationOptions] = useState<AiSourceOption[]>([])
-  const [selectedAccountId, setSelectedAccountId] = useState('')
-  const [content, setContent] = useState('')
-  const [mediaUrl, setMediaUrl] = useState('')
-  const [scheduledTime, setScheduledTime] = useState('')
-  const [preview, setPreview] = useState<ScheduledPostPreview | null>(null)
-  const [summary, setSummary] = useState<MonitorSummary | null>(null)
-  const [recent, setRecent] = useState<MonitorItem[]>([])
-  const [history, setHistory] = useState<PostHistoryItem[]>([])
-  const [historyStatus, setHistoryStatus] = useState('')
-  const [historyPlatform, setHistoryPlatform] = useState('')
-  const [historySearch, setHistorySearch] = useState('')
-  const [historyPage, setHistoryPage] = useState(0)
-  const [historyPageSize] = useState(6)
-  const [historyTotal, setHistoryTotal] = useState(0)
-  const [historyHasNext, setHistoryHasNext] = useState(false)
-  const [selectedHistoryId, setSelectedHistoryId] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [submitting, setSubmitting] = useState(false)
-  const [historyLoading, setHistoryLoading] = useState(false)
-  const [actioningPostId, setActioningPostId] = useState('')
-  const [message, setMessage] = useState('')
-  const [error, setError] = useState('')
+  const {
+    accounts,
+    composeMode,
+    setComposeMode,
+    aiGenerationLogId,
+    setAiGenerationLogId,
+    imageGenerationId,
+    setImageGenerationId,
+    aiGenerationOptions,
+    imageGenerationOptions,
+    selectedAccountId,
+    setSelectedAccountId,
+    content,
+    setContent,
+    mediaUrl,
+    setMediaUrl,
+    uploadedMediaUrls,
+    scheduledTime,
+    setScheduledTime,
+    preview,
+    summary,
+    recent,
+    history,
+    historyStatus,
+    historyPlatform,
+    historySearch,
+    historyPage,
+    historyPageSize,
+    historyTotal,
+    historyHasNext,
+    loading,
+    submitting,
+    historyLoading,
+    actioningPostId,
+    message,
+    error,
+    loadData,
+    loadHistory,
+    loadAiSources,
+    uploadMediaFiles,
+    clearUploadedMedia: storeClearUploadedMedia,
+    previewPost,
+    schedulePost,
+    postNow,
+    cancelPost,
+    rescheduleInOneHour,
+    setHistoryFilters,
+    setHistoryPage,
+    setSelectedHistoryId,
+    selectedHistoryId,
+  } = usePostStore()
 
   const selectedAccount = useMemo(
     () => accounts.find((account) => account.id === selectedAccountId) ?? null,
@@ -135,77 +86,17 @@ export default function Posts() {
     () => history.find((item) => item.id === selectedHistoryId) ?? null,
     [history, selectedHistoryId],
   )
-
-  const loadData = async () => {
-    setLoading(true)
-    setError('')
-
-    try {
-      const [accountsResponse, summaryResponse, recentResponse, aiSourcesResponse] = await Promise.all([
-        api.get<ApiResponse<SocialAccount[]>>('/social-accounts'),
-        api.get<ApiResponse<MonitorSummary>>('/posts/monitor/summary'),
-        api.get<ApiResponse<MonitorItem[]>>('/posts/monitor/recent'),
-        api.get<ApiResponse<AiPostSourcesResponse>>('/posts/ai/sources?limit=20').catch(() => null),
-      ])
-
-      const loadedAccounts = accountsResponse.data.data ?? []
-      setAccounts(loadedAccounts)
-      setSummary(summaryResponse.data.data ?? null)
-      setRecent(recentResponse.data.data ?? [])
-      setAiGenerationOptions(aiSourcesResponse?.data?.data?.aiGenerationLogs ?? [])
-      setImageGenerationOptions(aiSourcesResponse?.data?.data?.imageGenerations ?? [])
-
-      if (!selectedAccountId && loadedAccounts.length > 0) {
-        setSelectedAccountId(loadedAccounts[0].id)
-      }
-    } catch {
-      setError('Cannot load posting data right now.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const loadHistory = async () => {
-    setHistoryLoading(true)
-    setError('')
-
-    try {
-      const params = new URLSearchParams()
-      params.set('page', String(historyPage))
-      params.set('size', String(historyPageSize))
-      if (historyStatus) {
-        params.set('status', historyStatus)
-      }
-      if (historyPlatform) {
-        params.set('platform', historyPlatform)
-      }
-      if (historySearch) {
-        params.set('search', historySearch)
-      }
-
-      const response = await api.get<ApiResponse<PagedHistoryResponse>>(`/posts/history?${params.toString()}`)
-      const payload = response.data.data
-      setHistory(payload?.items ?? [])
-      setHistoryTotal(payload?.total ?? 0)
-      setHistoryHasNext(payload?.hasNext ?? false)
-    } catch {
-      setError('Cannot load post history right now.')
-    } finally {
-      setHistoryLoading(false)
-    }
-  }
-
   useEffect(() => {
     void loadData()
-  }, [])
+  }, [loadData])
 
   useEffect(() => {
     void loadHistory()
-  }, [historyStatus, historyPlatform, historySearch, historyPage, historyPageSize])
+  }, [historyStatus, historyPlatform, historySearch, historyPage, historyPageSize, loadHistory])
 
   useEffect(() => {
     setHistoryPage(0)
-  }, [historyStatus, historyPlatform, historySearch])
+  }, [historyStatus, historyPlatform, historySearch, setHistoryPage])
 
   useEffect(() => {
     if (history.length === 0) {
@@ -216,64 +107,37 @@ export default function Posts() {
     if (!selectedHistoryId || !history.some((item) => item.id === selectedHistoryId)) {
       setSelectedHistoryId(history[0].id)
     }
-  }, [history, selectedHistoryId])
+  }, [history, selectedHistoryId, setSelectedHistoryId])
 
   useEffect(() => {
-    if (!selectedAccount) {
-      return
-    }
-
+    if (!selectedAccount) return
     if (composeMode === 'MANUAL' && !content) {
       setContent(`Post for ${selectedAccount.accountName ?? selectedAccount.accountAlias ?? selectedAccount.platform}`)
     }
-  }, [composeMode, selectedAccount, content])
+  }, [composeMode, selectedAccount, content, setContent])
 
-  const loadAiSources = async () => {
-    try {
-      const response = await api.get<ApiResponse<AiPostSourcesResponse>>('/posts/ai/sources?limit=20')
-      setAiGenerationOptions(response.data.data?.aiGenerationLogs ?? [])
-      setImageGenerationOptions(response.data.data?.imageGenerations ?? [])
-    } catch {
-      setError('Cannot load AI sources right now.')
-    }
-  }
 
-  const getApiErrorMessage = (err: unknown, fallback: string) => {
-    const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
-    if (typeof message === 'string' && message.trim()) {
-      return message
-    }
-    return fallback
-  }
-
-  const buildRequest = (scheduledTimeOverride?: string) => ({
-    socialAccountId: selectedAccountId,
-    content,
-    mediaUrl,
-    scheduledTime: scheduledTimeOverride ?? scheduledTime,
-  })
-
-  const buildAiRequest = (scheduledTimeOverride?: string) => ({
-    socialAccountId: selectedAccountId,
-    scheduledTime: scheduledTimeOverride ?? scheduledTime,
-    aiGenerationLogId: aiGenerationLogId || undefined,
-    imageGenerationId: imageGenerationId || undefined,
-    contentOverride: content.trim() ? content : undefined,
-    mediaUrl: mediaUrl.trim() ? mediaUrl : undefined,
-  })
-
-  const formatContentSource = (value?: string) => {
-    if (!value) {
-      return 'unknown source'
-    }
-
-    return value.toLowerCase().replace(/_/g, ' ')
-  }
+  
 
   const formatAiOption = (item: AiSourceOption) => {
     const preview = item.contentPreview || '(empty caption)'
     return `${preview} • ${item.mediaCount} media • ${item.createdAt}`
   }
+
+  
+
+  const handleMediaUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files ? Array.from(event.target.files) : []
+    event.target.value = ''
+
+    if (files.length === 0) {
+      return
+    }
+    // delegate upload logic to store
+    await uploadMediaFiles(files)
+  }
+
+  const handleClearUploadedMedia = () => storeClearUploadedMedia()
 
   const getPublishedPostHref = (
     platform: Platform | undefined,
@@ -304,6 +168,10 @@ export default function Posts() {
   }
 
   const mediaUrlWarning = useMemo(() => {
+    if (uploadedMediaUrls.length > 0) {
+      return ''
+    }
+
     const value = mediaUrl.trim()
     if (!value) {
       return ''
@@ -324,162 +192,44 @@ export default function Posts() {
     }
 
     return 'This URL does not end in a known image/video extension. The backend will try content-type detection, but the post may still fail if the host blocks it.'
-  }, [mediaUrl, selectedAccount])
+  }, [uploadedMediaUrls.length, mediaUrl, selectedAccount])
 
   const handlePreview = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    setSubmitting(true)
-    setError('')
-    setMessage('')
-
     if (composeMode === 'AI' && !content.trim() && !aiGenerationLogId && !imageGenerationId) {
-      setError('Choose at least one AI source or provide content override.')
-      setSubmitting(false)
+      // keep same validation as before
+      // store will set error/message flags as needed
+      usePostStore.setState({ error: 'Choose at least one AI source or provide content override.' })
       return
     }
 
-    try {
-      if (composeMode === 'AI') {
-        const response = await api.post<ApiResponse<AiPostComposeResponse>>('/posts/ai/preview', buildAiRequest())
-        const payload = response.data.data
-        setPreview(payload?.post ?? null)
-        if (!mediaUrl && payload?.resolvedMediaUrls?.length) {
-          setMediaUrl(payload.resolvedMediaUrls[0])
-        }
-        setMessage(`AI preview loaded (${formatContentSource(payload?.contentSource)}).`)
-      } else {
-        const response = await api.post<ApiResponse<ScheduledPostPreview>>('/posts/preview', buildRequest())
-        setPreview(response.data.data ?? null)
-        setMessage('Preview loaded.')
-      }
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'Cannot load preview right now.'))
-    } finally {
-      setSubmitting(false)
-    }
+    await previewPost({ ai: composeMode === 'AI' })
   }
 
   const handleSchedule = async () => {
-    setSubmitting(true)
-    setError('')
-    setMessage('')
-
     if (composeMode === 'AI' && !content.trim() && !aiGenerationLogId && !imageGenerationId) {
-      setError('Choose at least one AI source or provide content override.')
-      setSubmitting(false)
+      usePostStore.setState({ error: 'Choose at least one AI source or provide content override.' })
       return
     }
 
-    try {
-      if (composeMode === 'AI') {
-        const response = await api.post<ApiResponse<AiPostComposeResponse>>('/posts/ai/schedule', buildAiRequest())
-        const payload = response.data.data
-        setPreview(payload?.post ?? null)
-        if (!mediaUrl && payload?.resolvedMediaUrls?.length) {
-          setMediaUrl(payload.resolvedMediaUrls[0])
-        }
-        setMessage(`AI post scheduled (${formatContentSource(payload?.contentSource)}).`)
-      } else {
-        const response = await api.post<ApiResponse<ScheduledPostPreview>>('/posts/schedule', buildRequest())
-        setPreview(response.data.data ?? null)
-        setMessage('Post scheduled successfully.')
-      }
-      await loadData()
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'Cannot schedule post right now.'))
-    } finally {
-      setSubmitting(false)
-    }
+    await schedulePost({ ai: composeMode === 'AI' })
   }
 
   const handlePostNow = async () => {
-    setSubmitting(true)
-    setError('')
-    setMessage('')
-
     if (composeMode === 'AI' && !content.trim() && !aiGenerationLogId && !imageGenerationId) {
-      setError('Choose at least one AI source or provide content override.')
-      setSubmitting(false)
+      usePostStore.setState({ error: 'Choose at least one AI source or provide content override.' })
       return
     }
 
-    const immediateScheduledTime = toLocalDatetimeInputValue(new Date(Date.now() + 60 * 1000))
-
-    try {
-      if (composeMode === 'AI') {
-        const response = await api.post<ApiResponse<AiPostComposeResponse>>(
-          '/posts/ai/schedule',
-          buildAiRequest(immediateScheduledTime),
-        )
-        const payload = response.data.data
-        setPreview(payload?.post ?? null)
-        if (!mediaUrl && payload?.resolvedMediaUrls?.length) {
-          setMediaUrl(payload.resolvedMediaUrls[0])
-        }
-        setMessage(`Post sent to queue for immediate publish (${formatContentSource(payload?.contentSource)}).`)
-      } else {
-        const response = await api.post<ApiResponse<ScheduledPostPreview>>(
-          '/posts/schedule',
-          buildRequest(immediateScheduledTime),
-        )
-        setPreview(response.data.data ?? null)
-        setMessage('Post sent to queue for immediate publish.')
-      }
-
-      setScheduledTime(immediateScheduledTime)
-      await loadData()
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'Cannot post right now.'))
-    } finally {
-      setSubmitting(false)
-    }
+    await postNow()
   }
 
   const handleCancel = async (postId: string) => {
-    setActioningPostId(postId)
-    setError('')
-    setMessage('')
-
-    try {
-      await api.patch<ApiResponse<ScheduledPostPreview>>(`/posts/${postId}/cancel`)
-      setMessage('Post cancelled.')
-      await Promise.all([loadData(), loadHistory()])
-    } catch {
-      setError('Cannot cancel this post right now.')
-    } finally {
-      setActioningPostId('')
-    }
+    await cancelPost(postId)
   }
 
   const handleRescheduleInOneHour = async (postId: string) => {
-    const scheduledAt = new Date(Date.now() + 60 * 60 * 1000)
-    const localIso = toLocalDatetimeInputValue(scheduledAt)
-
-    setActioningPostId(postId)
-    setError('')
-    setMessage('')
-
-    try {
-      await api.patch<ApiResponse<ScheduledPostPreview>>(`/posts/${postId}/reschedule`, {
-        scheduledTime: localIso,
-      })
-      setMessage('Post rescheduled for one hour from now.')
-      await Promise.all([loadData(), loadHistory()])
-    } catch {
-      setError('Cannot reschedule this post right now.')
-    } finally {
-      setActioningPostId('')
-    }
-  }
-
-  const toLocalDatetimeInputValue = (date: Date) => {
-    const pad = (value: number) => String(value).padStart(2, '0')
-
-    return [
-      date.getFullYear(),
-      pad(date.getMonth() + 1),
-      pad(date.getDate()),
-    ].join('-') + 'T' + [pad(date.getHours()), pad(date.getMinutes())].join(':')
+    await rescheduleInOneHour(postId)
   }
 
   if (!hasAuth) {
@@ -578,7 +328,32 @@ export default function Posts() {
             </label>
 
             <label>
-              Media URL
+              Upload image/video
+              <input
+                type="file"
+                accept="image/*,video/*"
+                multiple
+                onChange={(event) => void handleMediaUpload(event)}
+                disabled={submitting}
+              />
+            </label>
+
+            {uploadedMediaUrls.length > 0 ? (
+              <div className="detail-stack">
+                <div>
+                  <span>Uploaded media</span>
+                  {uploadedMediaUrls.map((url) => (
+                    <p key={url}>{url}</p>
+                  ))}
+                </div>
+                <button type="button" className="ghost-button" onClick={handleClearUploadedMedia} disabled={submitting}>
+                  Clear uploaded media
+                </button>
+              </div>
+            ) : null}
+
+            <label>
+              Media URL fallback
               <input value={mediaUrl} onChange={(event) => setMediaUrl(event.target.value)} />
             </label>
 
@@ -645,7 +420,7 @@ export default function Posts() {
           <div className="two-column history-filters">
             <label>
               Status
-              <select value={historyStatus} onChange={(event) => setHistoryStatus(event.target.value)}>
+              <select value={historyStatus} onChange={(event) => setHistoryFilters({ status: event.target.value, platform: historyPlatform, search: historySearch })}>
                 <option value="">All</option>
                 <option value="PENDING">PENDING</option>
                 <option value="PROCESSING">PROCESSING</option>
@@ -656,7 +431,7 @@ export default function Posts() {
 
             <label>
               Platform
-              <select value={historyPlatform} onChange={(event) => setHistoryPlatform(event.target.value)}>
+              <select value={historyPlatform} onChange={(event) => setHistoryFilters({ status: historyStatus, platform: event.target.value, search: historySearch })}>
                 <option value="">All</option>
                 <option value="FACEBOOK">FACEBOOK</option>
                 <option value="INSTAGRAM">INSTAGRAM</option>
@@ -668,7 +443,7 @@ export default function Posts() {
 
           <label>
             Search
-            <input value={historySearch} onChange={(event) => setHistorySearch(event.target.value)} placeholder="content, error, or account name" />
+            <input value={historySearch} onChange={(event) => setHistoryFilters({ status: historyStatus, platform: historyPlatform, search: event.target.value })} placeholder="content, error, or account name" />
           </label>
 
           {historyLoading ? <p className="muted">Loading history...</p> : null}
@@ -730,10 +505,10 @@ export default function Posts() {
               Showing {history.length === 0 ? 0 : historyPage * historyPageSize + 1}-{Math.min((historyPage + 1) * historyPageSize, historyTotal)} of {historyTotal}
             </span>
             <div className="history-pagination-actions">
-              <button type="button" className="ghost-button" onClick={() => setHistoryPage((value) => Math.max(value - 1, 0))} disabled={historyLoading || historyPage === 0}>
+              <button type="button" className="ghost-button" onClick={() => setHistoryPage(Math.max(historyPage - 1, 0))} disabled={historyLoading || historyPage === 0}>
                 Previous
               </button>
-              <button type="button" className="ghost-button" onClick={() => setHistoryPage((value) => value + 1)} disabled={historyLoading || !historyHasNext}>
+              <button type="button" className="ghost-button" onClick={() => setHistoryPage(historyPage + 1)} disabled={historyLoading || !historyHasNext}>
                 Next
               </button>
             </div>
