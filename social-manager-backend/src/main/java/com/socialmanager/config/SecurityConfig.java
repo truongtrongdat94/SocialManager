@@ -55,6 +55,7 @@ public class SecurityConfig {
                 ).permitAll()
                 .requestMatchers("/assets/**", "/fonts/**", "/*.js", "/*.css").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .requestMatchers("/api/**").authenticated()
                 .anyRequest().authenticated())
             .oauth2Login(oauth2 -> oauth2
                 .userInfoEndpoint(userInfo ->

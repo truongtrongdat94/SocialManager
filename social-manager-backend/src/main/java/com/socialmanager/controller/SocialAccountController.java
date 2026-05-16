@@ -14,6 +14,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -26,8 +27,36 @@ public class SocialAccountController {
     @Value("${app.frontend-url:http://localhost:3001}")
     private String frontendUrl;
 
+    @Value("${app.facebook.client-id:${app.meta.app-id:${META_APP_ID:${FACEBOOK_CLIENT_ID:}}}}")
+    private String facebookClientId;
+
+    @Value("${app.facebook.client-secret:${app.meta.app-secret:${META_APP_SECRET:${FACEBOOK_CLIENT_SECRET:}}}}")
+    private String facebookClientSecret;
+
+    @Value("${app.instagram.client-id:${INSTAGRAM_CLIENT_ID:}}")
+    private String instagramClientId;
+
+    @Value("${app.instagram.client-secret:${INSTAGRAM_CLIENT_SECRET:}}")
+    private String instagramClientSecret;
+
+    @Value("${app.threads.client-id:${THREADS_CLIENT_ID:}}")
+    private String threadsClientId;
+
+    @Value("${app.threads.client-secret:${THREADS_CLIENT_SECRET:}}")
+    private String threadsClientSecret;
+
+    @Value("${app.tiktok.client-key:${TIKTOK_CLIENT_KEY:}}")
+    private String tiktokClientKey;
+
+    @Value("${app.tiktok.client-secret:${TIKTOK_CLIENT_SECRET:}}")
+    private String tiktokClientSecret;
+
     private String frontendPath(String path) {
         return frontendUrl + path;
+    }
+
+    private boolean hasValue(String value) {
+        return value != null && !value.isBlank();
     }
 
     @GetMapping("/connect/{platform}")
@@ -35,6 +64,16 @@ public class SocialAccountController {
         String username = authentication.getName();
         String url = socialAccountService.generateAuthUrl(platform, username);
         return ResponseEntity.ok(ApiResponse.ok(url));
+    }
+
+    @GetMapping("/config")
+    public ResponseEntity<ApiResponse<Map<String, Boolean>>> getPlatformConfig() {
+        return ResponseEntity.ok(ApiResponse.ok(Map.of(
+            "facebook", hasValue(facebookClientId) && hasValue(facebookClientSecret),
+            "instagram", hasValue(instagramClientId) && hasValue(instagramClientSecret),
+            "threads", hasValue(threadsClientId) && hasValue(threadsClientSecret),
+            "tiktok", hasValue(tiktokClientKey) && hasValue(tiktokClientSecret)
+        )));
     }
 
     @GetMapping("/callback/facebook")
@@ -162,6 +201,20 @@ public class SocialAccountController {
         socialAccountService.deleteSocialAccountById(id, username);
         return ResponseEntity.ok(
             ApiResponse.ok("Social account deleted successfully")
+        );
+    }
+
+    @PostMapping("/dev/test")
+    public ResponseEntity<ApiResponse<SocialAccountDto>> createTestSocialAccount(
+        @RequestParam Platform platform,
+        @RequestParam(required = false, defaultValue = "Test Account") String accountName,
+        Authentication authentication
+    ) {
+        String username = authentication.getName();
+        return ResponseEntity.ok(
+            ApiResponse.ok(
+                socialAccountService.createTestAccount(username, platform, accountName)
+            )
         );
     }
 }

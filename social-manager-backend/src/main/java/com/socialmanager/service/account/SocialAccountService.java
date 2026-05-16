@@ -168,4 +168,25 @@ public class SocialAccountService {
 
         socialAccountRepository.delete(account);
     }
+
+    @Transactional
+    public SocialAccountDto createTestAccount(String username, Platform platform, String accountName) {
+        User user = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found"));
+        
+        SocialAccount account = SocialAccount.builder()
+            .user(user)
+            .platform(platform)
+            .externalAccountId("test_" + UUID.randomUUID())
+            .accountName(accountName != null ? accountName : "Test " + platform.name() + " Account")
+            .accountAlias("test_" + platform.name().toLowerCase())
+            .profilePictureUrl("https://via.placeholder.com/150")
+            .accessToken("test_access_token_" + System.currentTimeMillis())
+            .refreshToken(null)
+            .expiresAt(null)
+            .isAutoPilot(true)
+            .build();
+        
+        socialAccountRepository.save(account);
+        return mapToDto(account);
+    }
 }
