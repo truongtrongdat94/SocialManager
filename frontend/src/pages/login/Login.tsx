@@ -4,6 +4,7 @@ import { Button, Input } from "@/components";
 import {icons} from "@/constants/icons.ts";
 import { Eye, EyeClosed } from "lucide-react";
 import AuthApi from "@/apis/auth.api";
+import { getValidToken } from "@/utils/auth";
 
 export function Login() {
 	const [form, setForm] = useState({ username: "", password: "" });
@@ -32,7 +33,7 @@ export function Login() {
 	};
 
 	useEffect(() => {
-		const token = localStorage.getItem("token");
+		const token = getValidToken();
 		if (token) {
 			navigate("/dashboard/accounts");
 		}

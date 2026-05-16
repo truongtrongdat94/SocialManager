@@ -60,6 +60,10 @@ export const SetupGuide = () => {
             <span>TikTok</span>
             <span className="text-text-secondary">{statusLabel("tiktok")}</span>
           </div>
+          <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+            <span>Cloudinary</span>
+            <span className="text-text-secondary">{statusLabel("cloudinary")}</span>
+          </div>
         </div>
       </div>
 

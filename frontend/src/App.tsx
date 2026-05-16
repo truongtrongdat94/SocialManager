@@ -1,10 +1,18 @@
-import { createBrowserRouter, RouterProvider, Navigate } from "react-router";
+import { createBrowserRouter, RouterProvider, Navigate, redirect } from "react-router";
 import { AuthLayout, DashboardLayout } from "@/layouts";
 import Success from "@/pages/Success";
 import Failed from "@/pages/Failed.tsx";
 import AuthCallback from "@/pages/AuthCallback";
 import { Accounts, Post, Stats, SetupGuide, Login, Register } from "@/pages";
 import { Modal } from "@/components";
+import { getValidToken } from "@/utils";
+
+const requireAuth = () => {
+	if (!getValidToken()) {
+		throw redirect("/login");
+	}
+	return null;
+};
 
 const router = createBrowserRouter([
 	{
@@ -18,6 +26,7 @@ const router = createBrowserRouter([
 	{
 		path: "/dashboard",
 		element: <DashboardLayout />,
+		loader: requireAuth,
 		children: [
 			{ path: "accounts", element: <Accounts /> },
 			{ path: "post", element: <Post /> },

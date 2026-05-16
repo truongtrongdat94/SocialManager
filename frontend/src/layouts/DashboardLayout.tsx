@@ -3,6 +3,7 @@ import { EllipsisVertical, Globe, Send, ChartColumn, LogOut, Pencil, User, Wrenc
 import { useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { cn } from "@/utils";
+import { getValidToken } from "@/utils/auth";
 
 const sideBarButtons = [
 	{
@@ -32,7 +33,7 @@ export const DashboardLayout = () => {
 	const navigate = useNavigate();
 
 	useEffect(() => {
-		const token = localStorage.getItem("token");
+		const token = getValidToken();
 		if (!token) {
 			navigate("/login", { replace: true });
 		}

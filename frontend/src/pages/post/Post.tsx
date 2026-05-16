@@ -11,6 +11,13 @@ interface MediaFile {
 	type: "image" | "video";
 }
 
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 150 * 1024 * 1024;
+
+const getFileLimit = (media: MediaFile) => (media.type === "image" ? MAX_IMAGE_BYTES : MAX_VIDEO_BYTES);
+
+const formatLimitText = (bytes: number) => `${Math.round(bytes / (1024 * 1024))}MB`;
+
 
 export const Post = () => {
 	const accounts = useSocialAccountStore((state) => state.accounts);
@@ -131,6 +138,13 @@ export const Post = () => {
 		const scheduledTime = buildScheduledTime();
 		if (!scheduledTime) {
 			setError("Vui lòng chọn thời gian đăng bài.");
+			return;
+		}
+
+		const oversizedMedia = mediaFiles.find((media) => media.file.size > getFileLimit(media));
+		if (oversizedMedia) {
+			const limit = getFileLimit(oversizedMedia);
+			setError(`File \"${oversizedMedia.file.name}\" vượt giới hạn (${oversizedMedia.type === "image" ? "Ảnh" : "Video"} tối đa ${formatLimitText(limit)}).`);
 			return;
 		}
 

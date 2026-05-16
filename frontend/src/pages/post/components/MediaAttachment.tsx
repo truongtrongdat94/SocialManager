@@ -10,6 +10,17 @@ export interface MediaFile {
 	type: "image" | "video";
 }
 
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 150 * 1024 * 1024;
+
+const formatBytes = (bytes: number) => {
+	if (bytes < 1024) return `${bytes} B`;
+	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const getSizeLimitByType = (type: "image" | "video") => (type === "image" ? MAX_IMAGE_BYTES : MAX_VIDEO_BYTES);
+
 interface MediaAttachmentProps {
 	mediaFiles: MediaFile[];
 	onFilesSelect: (files: File[]) => void;
@@ -32,6 +43,7 @@ export const MediaAttachment = ({ mediaFiles, onFilesSelect, onRemove, onPreview
 				        "hover:bg-surface-secondary transition duration-200")}>
 				<Upload size={32} strokeWidth={1.5}/>
 				<div className="font-medium">Kéo thả file vào đây hoặc click để chọn</div>
+				<div className="text-xs text-text-secondary">Giới hạn thực tế: Ảnh ≤ 10MB, Video ≤ 150MB</div>
 				<FileInput
 					ref={inputRef}
 					accept="image/*,video/*"
@@ -101,6 +113,23 @@ export const MediaAttachment = ({ mediaFiles, onFilesSelect, onRemove, onPreview
 			<div className="text-text-secondary text-sm h-5">
 				{mediaFiles.length > 0 ? `${mediaFiles.length} file đã chọn` : " "}
 			</div>
+
+			{mediaFiles.length > 0 ? (
+				<div className="max-h-24 overflow-y-auto text-xs text-text-secondary rounded-md border border-border px-2 py-1">
+					{mediaFiles.map((media) => {
+						const limit = getSizeLimitByType(media.type);
+						const withinLimit = media.file.size <= limit;
+						return (
+							<div key={`${media.id}-size`} className="flex items-center justify-between gap-2 py-0.5">
+								<span className="truncate" title={media.file.name}>{media.file.name}</span>
+								<span className={withinLimit ? "text-green-700" : "text-red-700"}>
+									{formatBytes(media.file.size)} / {formatBytes(limit)} - {withinLimit ? "Trong giới hạn" : "Vượt giới hạn"}
+								</span>
+							</div>
+						);
+					})}
+				</div>
+			) : null}
 
 			<div className="flex flex-col gap-2">
 				<div>Link media (tuỳ chọn)</div>

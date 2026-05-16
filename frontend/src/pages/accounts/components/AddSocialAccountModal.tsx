@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { icons, platforms } from "@/constants"
 import { Button } from "@/components"
 import axiosInstance from "@/libs/axios";
+import { getValidToken } from "@/utils/auth";
 
 export const AddSocialAccountModal = () => {
 	const [error, setError] = useState("");
@@ -27,7 +28,7 @@ export const AddSocialAccountModal = () => {
 	const handleConnect = async (platform: string) => {
 		setError("");
 		setLoadingPlatform(platform);
-		const token = localStorage.getItem("token");
+		const token = getValidToken();
 		if (!token) {
 			setError("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
 			setLoadingPlatform("");
