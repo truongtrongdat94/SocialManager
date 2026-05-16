@@ -1,3 +1,42 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.iml
+
+# Node
+/frontend/node_modules/
+/frontend/dist/
+/frontend/build/
+/frontend/.env
+/frontend/token.txt
+
+# TypeScript build info
+/frontend/tsconfig.tsbuildinfo
+
+# Logs and local dev files
+dev-log.txt
+*.log
+
+# Backups
+frontend-backup-*/
+frontend-upstream-shell-*/
+
+# Java / Maven
+/social-manager-backend/target/
+*.class
+*.jar
+
+# Generated local IDE files
+/.idea/
+
+# Misc
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 # Environment secrets - NEVER commit
 .env
 *.env
