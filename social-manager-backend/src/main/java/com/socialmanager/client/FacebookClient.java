@@ -34,6 +34,7 @@ public class FacebookClient {
                 "&redirect_uri=%s" +
                 "&response_type=code" +
                 "&scope=pages_manage_metadata,pages_manage_posts,pages_manage_engagement,pages_read_engagement,pages_show_list" +
+                "&auth_type=reauthenticate" +
                 "&state=%s",
             facebookClientId,
             URLEncoder.encode(facebookRedirectUri, StandardCharsets.UTF_8),
