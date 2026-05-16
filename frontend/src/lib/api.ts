@@ -1,0 +1,105 @@
+import axios, { type AxiosError } from "axios";
+
+export interface ApiResponse<T> {
+	success: boolean;
+	data: T;
+	message?: string;
+}
+
+export interface AuthResponse {
+	token: string;
+}
+
+export interface UserDto {
+	id: string;
+	email: string;
+	username: string;
+	name: string;
+}
+
+export interface RegisterRequest {
+	username: string;
+	email: string;
+	password: string;
+	name: string;
+}
+
+export interface LoginRequest {
+	username: string;
+	password: string;
+}
+
+export interface SocialAccountDto {
+	id: string;
+	platform: "FACEBOOK" | "INSTAGRAM" | "THREADS" | "TIKTOK";
+	accountName: string;
+	accountId: string;
+	accessToken: string;
+	refreshToken: string;
+	tokenExpiresAt: string | null;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface AiGenerationLog {
+	id: string;
+	prompt: string;
+	resultCaption: string;
+	createdAt?: string;
+}
+
+export interface ImageGeneration {
+	id: string;
+	prompt: string;
+	imageUrl?: string;
+	cloudinaryUrl?: string;
+	cloudinaryUrls?: string[];
+	leonardoGenerationId?: string;
+	status: string;
+	createdAt?: string;
+}
+
+export type AnalyticsMap = Record<string, number[]>;
+
+const rawBaseUrl =
+	(import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "http://localhost:8080";
+const baseURL = rawBaseUrl.replace(/\/+$/, "");
+
+export const api = axios.create({
+	baseURL,
+	headers: {
+		"Content-Type": "application/json",
+	},
+});
+
+api.interceptors.request.use((config) => {
+	const token = localStorage.getItem("token");
+	if (token) {
+		config.headers.Authorization = `Bearer ${token}`;
+	}
+	return config;
+});
+
+api.interceptors.response.use(
+	(response) => response,
+	(error: AxiosError<{ message?: string }>) => {
+		if (error.response?.status === 401) {
+			localStorage.removeItem("token");
+			if (!window.location.pathname.includes("/login")) {
+				window.location.href = "/login";
+			}
+		}
+		return Promise.reject(error);
+	}
+);
+
+export function getApiErrorMessage(error: unknown): string {
+	if (axios.isAxiosError<{ message?: string }>(error)) {
+		return (
+			error.response?.data?.message ||
+			error.message ||
+			"Có lỗi mạng xảy ra, vui lòng thử lại."
+		);
+	}
+	return "Đã có lỗi không xác định xảy ra.";
+}

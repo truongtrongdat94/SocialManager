@@ -1,107 +1,143 @@
-import { useState, useEffect } from "react";
-import { Button } from "@/components";
-import { useSocialAccountStore, useModalStore } from "@/stores";
-import { AccountSelection, SchedulePost, CaptionInput, MediaAttachment } from "./components";
+import { useMemo, useState } from "react";
+import { useLocation } from "react-router";
+import toast from "react-hot-toast";
 
-interface MediaFile {
-	id: string;
-	file: File;
-	previewUrl: string;
-	type: "image" | "video";
-}
+type IncomingAiState = {
+	caption?: string;
+	imageUrl?: string;
+};
 
+export function Post() {
+	const location = useLocation();
+	const incoming = (location.state as IncomingAiState | null) ?? null;
 
-export const Post = () => {
-	const accounts = useSocialAccountStore((state) => state.accounts);
-	const openModal = useModalStore((state) => state.open);
+	const [caption, setCaption] = useState(incoming?.caption ?? "");
+	const [imageUrl, setImageUrl] = useState(incoming?.imageUrl ?? "");
+	const [postMode, setPostMode] = useState<"now" | "schedule">("now");
+	const [scheduledAt, setScheduledAt] = useState("");
 
-	const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([]);
-	const [isDatePick, setIsDatePick] = useState(false);
-	const [postDate, setPostDate] = useState<Date | undefined>(new Date());
-	const [hour, setHour] = useState(6);
-	const [minute, setMinute] = useState(50);
-	const [caption, setCaption] = useState("");
-	const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
+	const canPublish = useMemo(() => caption.trim().length > 0, [caption]);
 
-	const handleToggleAccount = (accountId: string) => {
-		setSelectedAccountIds((prevSelected) => {
-			if (prevSelected.includes(accountId)) {
-				return prevSelected.filter((id) => id !== accountId);
-			}
-			return [...prevSelected, accountId];
-		});
-	};
+	const handlePublish = () => {
+		if (!canPublish) {
+			toast.error("Vui lòng nhập caption trước khi đăng.");
+			return;
+		}
 
-	const handleFilesSelect = (files: File[]) => {
-		const newMedia: MediaFile[] = files.map(file => ({
-			id: crypto.randomUUID(),
-			file,
-			previewUrl: URL.createObjectURL(file),
-			type: file.type.startsWith("video/") ? "video" : "image" as const
-		}));
-		setMediaFiles(prev => [...prev, ...newMedia]);
-	};
+		if (postMode === "schedule" && !scheduledAt) {
+			toast.error("Vui lòng chọn thời gian lên lịch.");
+			return;
+		}
 
-	const handleRemoveMedia = (idToRemove: string) => {
-		setMediaFiles(prev => {
-			const fileToRemove = prev.find(m => m.id === idToRemove);
-			if (fileToRemove) {
-				URL.revokeObjectURL(fileToRemove.previewUrl);
-			}
-			return prev.filter(m => m.id !== idToRemove);
-		});
-	};
-
-	const handlePreviewClick = (media: MediaFile) => {
-		openModal(
-			"Xem trước tệp đính kèm",
-			<div className="flex justify-center items-center w-full max-h-[80vh] overflow-hidden rounded-lg bg-black/5">
-				{media.type === "video" ? (
-					<video src={media.previewUrl} controls autoPlay className="max-w-full max-h-[75vh] object-contain rounded-lg"/>
-				) : (
-					<img src={media.previewUrl} alt="preview" className="max-w-full max-h-[75vh] object-contain rounded-lg"/>
-				)}
-			</div>
+		toast.success(
+			postMode === "now"
+				? "Đã gửi yêu cầu đăng ngay (demo UI)."
+				: `Đã gửi yêu cầu lên lịch lúc ${scheduledAt} (demo UI).`,
 		);
 	};
 
-	useEffect(() => {
-		return () => {
-			mediaFiles.forEach(media => URL.revokeObjectURL(media.previewUrl));
-		};
-	}, []);
-
 	return (
-		<div className="flex h-full flex-col gap-4">
-			<div className="flex justify-between">
-				<div className="flex flex-col gap-1">
-					<div className="text-2xl font-bold">Đăng bài</div>
-					<div className="text-text-secondary text-sm">Tạo và đăng bài lên các nền tảng</div>
-				</div>
-				<Button variant="solid" color="primary">Đăng bài</Button>
+		<div className="relative w-full overflow-hidden rounded-[30px] border border-sky-100 bg-gradient-to-br from-[#f2fbff] via-[#ecf8ff] to-[#def4ff] p-5 shadow-[0_12px_30px_rgba(56,146,183,0.15)] lg:p-7">
+			<div className="pointer-events-none absolute -left-3 top-2 text-[64px] opacity-20 select-none">🐻‍❄️</div>
+			<div className="pointer-events-none absolute -right-2 bottom-1 text-[60px] opacity-20 select-none">🐧</div>
+
+			<div className="mb-8 rounded-[24px] border border-sky-100/80 bg-white/75 px-5 py-5 backdrop-blur-sm">
+				<h1 className="text-3xl font-bold tracking-tight text-sky-800">Đăng bài</h1>
+				<p className="mt-2 text-base text-sky-700/80">
+					Trang này nhận dữ liệu từ AI Dashboard qua router state: caption + imageUrl.
+				</p>
 			</div>
 
-			<div className="flex flex-col h-full gap-4">
-				<div className="flex gap-4 flex-4">
-					<AccountSelection accounts={accounts} selectedIds={selectedAccountIds} onToggle={handleToggleAccount}/>
-					<CaptionInput caption={caption} onChange={setCaption}/>
-				</div>
+			<div className="grid grid-cols-1 gap-7 2xl:grid-cols-2">
+				<section className="rounded-[28px] border border-sky-100 bg-white/90 p-6 shadow-[0_8px_24px_rgba(64,164,202,0.14)] lg:p-7">
+					<h2 className="mb-5 text-xl font-bold text-sky-800">Nội dung</h2>
 
-				<div className="flex gap-4 flex-5 min-w-0">
-					<SchedulePost
-						isDatePick={isDatePick} setIsDatePick={setIsDatePick}
-						postDate={postDate} setPostDate={setPostDate}
-						hour={hour} setHour={setHour}
-						minute={minute} setMinute={setMinute}
-					/>
-					<MediaAttachment
-						mediaFiles={mediaFiles}
-						onFilesSelect={handleFilesSelect}
-						onRemove={handleRemoveMedia}
-						onPreview={handlePreviewClick}
-					/>
-				</div>
+					<div className="space-y-4">
+						<div>
+							<label className="mb-2 block text-sm font-semibold text-sky-700">Caption</label>
+							<textarea
+								rows={8}
+								value={caption}
+								onChange={(e) => setCaption(e.target.value)}
+								className="w-full rounded-2xl border border-sky-200 bg-[#f7fcff] px-4 py-3 text-[15px] text-sky-900 outline-none transition focus:border-sky-400 focus:shadow-[0_0_0_4px_rgba(56,189,248,0.18)]"
+								placeholder="Nhập nội dung bài đăng..."
+							/>
+						</div>
+
+						<div>
+							<label className="mb-2 block text-sm font-semibold text-sky-700">Image URL</label>
+							<input
+								value={imageUrl}
+								onChange={(e) => setImageUrl(e.target.value)}
+								className="h-11 w-full rounded-xl border border-sky-200 bg-[#f7fcff] px-4 text-sm text-sky-900 outline-none transition focus:border-sky-400 focus:shadow-[0_0_0_4px_rgba(56,189,248,0.18)]"
+								placeholder="https://..."
+							/>
+						</div>
+					</div>
+				</section>
+
+				<section className="rounded-[28px] border border-sky-100 bg-white/90 p-6 shadow-[0_8px_24px_rgba(64,164,202,0.14)] lg:p-7">
+					<h2 className="mb-5 text-xl font-bold text-sky-800">Preview & Publish</h2>
+
+					<div className="space-y-4">
+						<div className="overflow-hidden rounded-[28px] border border-sky-200 bg-gradient-to-br from-[#f6fcff] to-[#e9f7ff]">
+							{imageUrl ? (
+								<img src={imageUrl} alt="Post media preview" className="h-[320px] w-full object-cover" />
+							) : (
+								<div className="flex h-[320px] items-center justify-center text-sm text-sky-600">Chưa có ảnh preview</div>
+							)}
+						</div>
+
+						<div className="rounded-2xl border border-sky-200 bg-[#f8fdff] p-5">
+							<p className="mb-3 text-sm font-semibold text-sky-700">Chế độ đăng</p>
+							<div className="flex gap-2">
+								<button
+									type="button"
+									onClick={() => setPostMode("now")}
+									className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+										postMode === "now"
+											? "border-sky-500 bg-sky-500 text-white"
+											: "border-sky-200 bg-white text-sky-700 hover:bg-sky-50"
+									}`}
+								>
+									Đăng ngay
+								</button>
+								<button
+									type="button"
+									onClick={() => setPostMode("schedule")}
+									className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+										postMode === "schedule"
+											? "border-sky-500 bg-sky-500 text-white"
+											: "border-sky-200 bg-white text-sky-700 hover:bg-sky-50"
+									}`}
+								>
+									Lên lịch
+								</button>
+							</div>
+
+							{postMode === "schedule" && (
+								<div className="mt-3">
+									<input
+										type="datetime-local"
+										value={scheduledAt}
+										onChange={(e) => setScheduledAt(e.target.value)}
+										className="h-11 w-full rounded-xl border border-sky-200 bg-white px-4 text-sm text-sky-900 outline-none transition focus:border-sky-400 focus:shadow-[0_0_0_4px_rgba(56,189,248,0.18)]"
+									/>
+								</div>
+							)}
+						</div>
+
+						<button
+							type="button"
+							onClick={handlePublish}
+							disabled={!canPublish}
+							className="h-12 w-full rounded-full bg-sky-600 px-5 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-60"
+						>
+							Xác nhận đăng bài
+						</button>
+					</div>
+				</section>
 			</div>
 		</div>
 	);
-};
+}
