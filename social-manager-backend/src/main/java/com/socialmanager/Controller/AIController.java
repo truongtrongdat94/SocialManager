@@ -38,12 +38,13 @@ public class AIController {
      * Hàm dùng chung để bắt thông tin User đang gọi API từ JWT Token
      */
     private User getCurrentAuthenticatedUser() {
-        // Cái getName() này hiện tại do module Auth quyết định, khả năng cao nó đang trả về Username
-        String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+        // getName() có thể trả về email (Google OAuth) hoặc username (local login)
+        String identifier = SecurityContextHolder.getContext().getAuthentication().getName();
         
-        // SỬA Ở ĐÂY: Đổi findByEmail thành findByUsername
-        return userRepository.findByUsername(currentUsername)
-                .orElseThrow(() -> new RuntimeException("Lỗi Auth: Không tìm thấy User có username là [" + currentUsername + "] trong Database!"));
+        // Tìm theo email trước, nếu không có thì tìm theo username
+        return userRepository.findByEmail(identifier)
+                .or(() -> userRepository.findByUsername(identifier))
+                .orElseThrow(() -> new RuntimeException("Lỗi Auth: Không tìm thấy User có identifier [" + identifier + "] trong Database!"));
     }
 
     @PostMapping("/generate-caption")
@@ -61,8 +62,10 @@ public class AIController {
 
     @GetMapping("/history")
     public ResponseEntity<?> getHistory(@AuthenticationPrincipal UserDetails userDetails) {
-        // 1. Tìm thực thể User đầy đủ từ username trong Token
-        User currentUser = userRepository.findByUsername(userDetails.getUsername())
+        // 1. Tìm thực thể User đầy đủ từ email hoặc username trong Token
+        String identifier = userDetails.getUsername(); // Có thể là email hoặc username
+        User currentUser = userRepository.findByEmail(identifier)
+                .or(() -> userRepository.findByUsername(identifier))
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         // 2. Gọi hàm Service mới để lấy đúng đồ của mình

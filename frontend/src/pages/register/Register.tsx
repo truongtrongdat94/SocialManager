@@ -63,7 +63,9 @@ export function Register() {
 				password: form.password,
 			});
 
-			localStorage.setItem("token", loginResponse.data.data.token);
+			const { accessToken, refreshToken } = loginResponse.data.data;
+			localStorage.setItem("accessToken", accessToken);
+			localStorage.setItem("refreshToken", refreshToken);
 			toast.success("Đăng ký thành công");
 			navigate("/dashboard/ai");
 		} catch (error) {
