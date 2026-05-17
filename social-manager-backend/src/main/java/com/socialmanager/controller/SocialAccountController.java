@@ -36,6 +36,10 @@ public class SocialAccountController {
         return ResponseEntity.ok(ApiResponse.ok(url));
     }
 
+    private void redirect(HttpServletResponse response) throws IOException {
+        response.sendRedirect(frontendUrl + "/dashboard/accounts?status=success");
+    }
+
     @GetMapping("/callback/facebook")
     public void handleFacebookCallback(
         @RequestParam(name = "code", required = false) String code,
@@ -47,7 +51,7 @@ public class SocialAccountController {
 
         String username = jwtUtil.getUsernameFromToken(state);
         socialAccountService.connectFacebookAccount(code, username);
-        response.sendRedirect(frontendUrl + "/success");
+        redirect(response);
     }
 
     @GetMapping("/callback/instagram")
@@ -61,7 +65,7 @@ public class SocialAccountController {
 
         String username = jwtUtil.getUsernameFromToken(state);
         socialAccountService.connectInstagramAccount(code, username);
-        response.sendRedirect(frontendUrl + "/success");
+        redirect(response);
     }
 
     @GetMapping("/callback/threads")
@@ -75,7 +79,7 @@ public class SocialAccountController {
 
         String username = jwtUtil.getUsernameFromToken(state);
         socialAccountService.connectThreadsAccount(code, username);
-        response.sendRedirect(frontendUrl + "/success");
+        redirect(response);
     }
 
     @GetMapping("/callback/tiktok")
@@ -95,7 +99,7 @@ public class SocialAccountController {
         String username = jwtUtil.getUsernameFromToken(state);
 
         socialAccountService.connectTikTokAccount(code, codeVerifier, username);
-        response.sendRedirect(frontendUrl + "/success");
+        redirect(response);
     }
 
     @GetMapping

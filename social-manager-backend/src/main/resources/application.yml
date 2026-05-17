@@ -1,6 +1,8 @@
 spring:
   application:
     name: social-manager-backend
+  config:
+    import: optional:file:.env.properties
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
   datasource:
@@ -41,10 +43,6 @@ app:
     cloud-name: ${CLOUDINARY_CLOUD_NAME}
     api-key: ${CLOUDINARY_API_KEY}
     api-secret: ${CLOUDINARY_API_SECRET}
-  meta:
-    app-id: ${META_APP_ID:}
-    app-secret: ${META_APP_SECRET:}
-    redirect-uri: ${META_REDIRECT_URI:http://localhost:8080/api/auth/callback/meta}
   tiktok:
     client-key: ${TIKTOK_CLIENT_KEY:}
     client-secret: ${TIKTOK_CLIENT_SECRET:}

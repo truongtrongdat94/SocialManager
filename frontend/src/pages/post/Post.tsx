@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components";
-import { useSocialAccountStore, useModalStore } from "@/stores";
+import { useModalStore } from "@/stores";
 import { AccountSelection, SchedulePost, CaptionInput, MediaAttachment } from "./components";
 
 interface MediaFile {
@@ -12,7 +12,6 @@ interface MediaFile {
 
 
 export const Post = () => {
-	const accounts = useSocialAccountStore((state) => state.accounts);
 	const openModal = useModalStore((state) => state.open);
 
 	const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([]);
@@ -72,7 +71,7 @@ export const Post = () => {
 	}, []);
 
 	return (
-		<div className="flex h-full flex-col gap-4">
+		<div className="flex h-full flex-col gap-4 overflow-hidden">
 			<div className="flex justify-between">
 				<div className="flex flex-col gap-1">
 					<div className="text-2xl font-bold">Đăng bài</div>
@@ -81,13 +80,13 @@ export const Post = () => {
 				<Button variant="solid" color="primary">Đăng bài</Button>
 			</div>
 
-			<div className="flex flex-col h-full gap-4">
-				<div className="flex gap-4 flex-4">
-					<AccountSelection accounts={accounts} selectedIds={selectedAccountIds} onToggle={handleToggleAccount}/>
+			<div className="flex flex-col h-full gap-4 min-h-0">
+				<div className="flex gap-4 flex-6 overflow-hidden">
+					<AccountSelection selectedIds={selectedAccountIds} onToggle={handleToggleAccount}/>
 					<CaptionInput caption={caption} onChange={setCaption}/>
 				</div>
 
-				<div className="flex gap-4 flex-5 min-w-0">
+				<div className="flex gap-4 flex-8 min-w-0">
 					<SchedulePost
 						isDatePick={isDatePick} setIsDatePick={setIsDatePick}
 						postDate={postDate} setPostDate={setPostDate}
