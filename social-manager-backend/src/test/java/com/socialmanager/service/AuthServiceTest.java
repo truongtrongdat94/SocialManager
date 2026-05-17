@@ -181,11 +181,14 @@ class AuthServiceTest {
         if (safePass.length() > 20) safePass = safePass.substring(0, 20);
 
         authService.register(new RegisterRequest(safe, safe + "@test.com", safePass, "User"));
-        String token = authService.login(new LoginRequest(safe, safePass));
+        var authResponse = authService.login(new LoginRequest(safe, safePass));
 
-        assertThat(token).isNotBlank();
-        assertThat(jwtUtil.validateToken(token)).isTrue();
-        assertThat(jwtUtil.getUsernameFromToken(token)).isEqualTo(safe);
+        assertThat(authResponse).isNotNull();
+        assertThat(authResponse.accessToken()).isNotBlank();
+        assertThat(authResponse.refreshToken()).isNotBlank();
+        assertThat(jwtUtil.validateToken(authResponse.accessToken())).isTrue();
+        assertThat(jwtUtil.getUsernameFromToken(authResponse.accessToken())).isEqualTo(safe);
+        assertThat(jwtUtil.validateToken(authResponse.refreshToken())).isTrue();
     }
 
     // ── Property 20: Local and Google accounts are independent ───────────────

@@ -2,13 +2,14 @@ import { NavLink, Navigate, Outlet, RouterProvider, createBrowserRouter } from "
 import { Toaster } from "react-hot-toast";
 import { Login } from "@/pages/login/Login";
 import { Register } from "@/pages/register/Register";
+import { OAuthCallback } from "@/pages/auth/OAuthCallback";
 import AiMediaDashboard from "@/pages/AiMediaDashboard";
 import { Post } from "@/pages/post/Post";
 import { Accounts } from "@/pages/accounts/Accounts";
 import { Stats } from "@/pages/stats/Stats";
 
 function ProtectedRoute() {
-	const token = localStorage.getItem("token");
+	const token = localStorage.getItem("accessToken");
 	if (!token) {
 		return <Navigate to="/login" replace />;
 	}
@@ -51,7 +52,8 @@ function DashboardLayout() {
 						<button
 							type="button"
 							onClick={() => {
-								localStorage.removeItem("token");
+								localStorage.removeItem("accessToken");
+								localStorage.removeItem("refreshToken");
 								window.location.href = "/login";
 							}}
 							className="mt-4 rounded-full border border-zinc-100 px-4 py-2.5 text-left text-sm font-semibold text-zinc-700"
@@ -72,6 +74,7 @@ function DashboardLayout() {
 const router = createBrowserRouter([
 	{ path: "/login", element: <Login /> },
 	{ path: "/register", element: <Register /> },
+	{ path: "/auth/callback", element: <OAuthCallback /> },
 	{
 		element: <ProtectedRoute />,
 		children: [

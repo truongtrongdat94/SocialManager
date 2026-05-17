@@ -30,6 +30,12 @@ public class User {
     @Column(name = "google_id")
     private String googleId;
 
+    @Column(name = "refresh_token", columnDefinition = "TEXT")
+    private String refreshToken;
+
+    @Column(name = "refresh_token_expires_at")
+    private LocalDateTime refreshTokenExpiresAt;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

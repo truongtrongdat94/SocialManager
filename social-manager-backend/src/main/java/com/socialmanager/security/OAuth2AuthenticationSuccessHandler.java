@@ -1,5 +1,6 @@
 package com.socialmanager.security;
 
+import com.socialmanager.model.User;
 import com.socialmanager.service.AuthService;
 import com.socialmanager.util.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -9,8 +10,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 
 @Component
 @RequiredArgsConstructor
@@ -28,8 +31,27 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         String name = oidcUser.getFullName();
         String googleId = oidcUser.getSubject();
 
-        authService.processOAuthUser(email, name, googleId);
-        String token = jwtUtil.generateToken(email);
-        response.sendRedirect("http://localhost:3000/auth/callback?token=" + token);
+        User user = authService.processOAuthUser(email, name, googleId);
+        
+        // Generate both access token and refresh token
+        String accessToken = jwtUtil.generateToken(email);
+        String refreshToken = jwtUtil.generateRefreshToken(email);
+        
+        // Save refresh token to database
+        user.setRefreshToken(refreshToken);
+        user.setRefreshTokenExpiresAt(
+            LocalDateTime.now().plusSeconds(jwtUtil.getRefreshExpirationMs() / 1000)
+        );
+        authService.saveUser(user);
+        
+        // Redirect to frontend with tokens
+        String redirectUrl = UriComponentsBuilder
+            .fromUriString("http://localhost:3000/auth/callback")
+            .queryParam("accessToken", accessToken)
+            .queryParam("refreshToken", refreshToken)
+            .build()
+            .toUriString();
+            
+        response.sendRedirect(redirectUrl);
     }
 }

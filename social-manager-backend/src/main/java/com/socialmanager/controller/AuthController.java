@@ -3,6 +3,7 @@ package com.socialmanager.controller;
 import com.socialmanager.dto.ApiResponse;
 import com.socialmanager.dto.AuthResponse;
 import com.socialmanager.dto.LoginRequest;
+import com.socialmanager.dto.RefreshTokenRequest;
 import com.socialmanager.dto.RegisterRequest;
 import com.socialmanager.dto.UserDto;
 import com.socialmanager.service.AuthService;
@@ -28,8 +29,14 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
-        String token = authService.login(request);
-        return ResponseEntity.ok(ApiResponse.ok(new AuthResponse(token)));
+        AuthResponse authResponse = authService.login(request);
+        return ResponseEntity.ok(ApiResponse.ok(authResponse));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<AuthResponse>> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        AuthResponse authResponse = authService.refreshAccessToken(request.refreshToken());
+        return ResponseEntity.ok(ApiResponse.ok(authResponse));
     }
 
     @GetMapping("/me")
