@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Card, Button, FileInput, Input } from "@/components";
 import { Info, Upload, X } from "lucide-react";
 import { cn } from "@/utils";
@@ -26,12 +26,13 @@ interface MediaAttachmentProps {
 	onFilesSelect: (files: File[]) => void;
 	onRemove: (id: string) => void;
 	onPreview: (media: MediaFile) => void;
-	mediaUrl: string;
-	onMediaUrlChange: (value: string) => void;
+	mediaUrls: string[];
+	onMediaUrlsChange: (values: string[]) => void;
 }
 
-export const MediaAttachment = ({ mediaFiles, onFilesSelect, onRemove, onPreview, mediaUrl, onMediaUrlChange }: MediaAttachmentProps) => {
+export const MediaAttachment = ({ mediaFiles, onFilesSelect, onRemove, onPreview, mediaUrls, onMediaUrlsChange }: MediaAttachmentProps) => {
 	const inputRef = useRef<HTMLInputElement>(null);
+	const [linkInput, setLinkInput] = useState<string>("");
 
 	return (
 		<Card className="flex flex-col gap-4 min-h-fit flex-9 h-full min-w-0">
@@ -133,12 +134,47 @@ export const MediaAttachment = ({ mediaFiles, onFilesSelect, onRemove, onPreview
 
 			<div className="flex flex-col gap-2">
 				<div>Link media (tuỳ chọn)</div>
-				<Input
-					value={mediaUrl}
-					onChange={(event) => onMediaUrlChange(event.target.value)}
-					placeholder="https://..."
-				/>
+				<div className="flex gap-2">
+					<Input
+						value={linkInput}
+						onChange={(event) => setLinkInput(event.target.value)}
+						placeholder="https://..."
+					/>
+					<Button
+						variant="solid"
+						color="primary"
+						onClick={() => {
+							const trimmed = linkInput.trim();
+							if (!trimmed) return;
+							const merged = Array.from(new Set([...(mediaUrls || []), trimmed]));
+							onMediaUrlsChange(merged);
+							setLinkInput("");
+						}}
+					>
+						Thêm
+					</Button>
+				</div>
 				<div className="text-text-secondary text-sm">Dùng khi bạn muốn đăng bằng link ảnh/video.</div>
+
+				{mediaUrls && mediaUrls.length > 0 ? (
+					<div className="flex flex-col gap-1 text-sm">
+						{mediaUrls.map((url, idx) => (
+							<div key={`link-${idx}`} className="flex items-center justify-between gap-2">
+								<a href={url} target="_blank" rel="noreferrer" className="truncate text-accent">{url}</a>
+								<button
+									onClick={() => {
+										const copy = [...mediaUrls];
+										copy.splice(idx, 1);
+										onMediaUrlsChange(copy);
+									}}
+									className="text-red-600 text-xs"
+								>
+									Xóa
+								</button>
+							</div>
+						))}
+					</div>
+				) : null}
 			</div>
 		</Card>
 	);

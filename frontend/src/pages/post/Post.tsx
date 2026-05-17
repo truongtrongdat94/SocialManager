@@ -31,7 +31,7 @@ export const Post = () => {
 	const [minute, setMinute] = useState(50);
 	const [caption, setCaption] = useState("");
 	const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
-	const [mediaUrl, setMediaUrl] = useState("");
+	const [mediaUrls, setMediaUrls] = useState<string[]>([]);
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState("");
 	const [success, setSuccess] = useState("");
@@ -151,12 +151,13 @@ export const Post = () => {
 		setSubmitting(true);
 		try {
 			const uploadedUrls = await uploadMediaFiles();
-			const trimmedMediaUrl = mediaUrl.trim();
+			const incomingLinks = mediaUrls.map((m) => m.trim()).filter(Boolean);
+			const mergedMediaUrls = Array.from(new Set([...(uploadedUrls || []), ...incomingLinks]));
 			const payloadBase = {
 				content: caption.trim(),
 				scheduledTime,
-				mediaUrl: trimmedMediaUrl ? trimmedMediaUrl : undefined,
-				mediaUrls: uploadedUrls.length > 0 ? uploadedUrls : undefined,
+				mediaUrls: mergedMediaUrls.length > 0 ? mergedMediaUrls : undefined,
+				mediaUrl: mergedMediaUrls.length > 0 ? mergedMediaUrls[0] : undefined,
 			};
 			const createdIds: string[] = [];
 			for (const accountId of selectedAccountIds) {
@@ -257,8 +258,8 @@ export const Post = () => {
 						onFilesSelect={handleFilesSelect}
 						onRemove={handleRemoveMedia}
 						onPreview={handlePreviewClick}
-						mediaUrl={mediaUrl}
-						onMediaUrlChange={setMediaUrl}
+						mediaUrls={mediaUrls}
+						onMediaUrlsChange={setMediaUrls}
 					/>
 				</div>
 			</div>

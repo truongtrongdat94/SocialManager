@@ -1,14 +1,10 @@
 import api from "../api/axios";
-import { FormEvent, useEffect, useState } from "react";
+import type { FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function Login() {
-    enum Platform {
-        FACEBOOK = "FACEBOOK",
-        INSTAGRAM = "INSTAGRAM",
-        THREADS = "THREADS",
-        TIKTOK = "TIKTOK",
-    }
+    type Platform = 'FACEBOOK' | 'INSTAGRAM' | 'THREADS' | 'TIKTOK'
 
     const [form, setForm] = useState({ username: "", password: "" });
     const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -91,16 +87,16 @@ export default function Login() {
             {isLoggedIn && (
                 <div style={{marginTop: "1rem", display: "flex", flexDirection: "column", gap: "0.5rem"}}>
                     <h2>CONNECT SOCIAL</h2>
-                    <button style={{width: "fit-content"}} onClick={() => handleLogin(Platform.FACEBOOK)}>
+                    <button style={{width: "fit-content"}} onClick={() => handleLogin('FACEBOOK')}>
                         Connect Facebook
                     </button>
-                    <button style={{width: "fit-content"}} onClick={() => handleLogin(Platform.INSTAGRAM)}>
+                    <button style={{width: "fit-content"}} onClick={() => handleLogin('INSTAGRAM')}>
                         Connect Instagram
                     </button>
-                    <button style={{width: "fit-content"}} onClick={() => handleLogin(Platform.THREADS)}>
+                    <button style={{width: "fit-content"}} onClick={() => handleLogin('THREADS')}>
                         Connect Threads
                     </button>
-                    <button style={{width: "fit-content"}} onClick={() => handleLogin(Platform.TIKTOK)}>
+                    <button style={{width: "fit-content"}} onClick={() => handleLogin('TIKTOK')}>
                         Connect TikTok
                     </button>
                 </div>
