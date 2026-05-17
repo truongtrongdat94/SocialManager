@@ -42,7 +42,7 @@ export function Accounts() {
 
 	const connectPlatform = async (platform: (typeof PLATFORM_OPTIONS)[number]) => {
 		try {
-			const response = await api.get<ApiResponse<string>>(`/api/social-accounts/connect/${platform}`);
+			const response = await api.get<ApiResponse<string>>(`/api/social-accounts/connect/${platform.toUpperCase()}`);
 			const url = response.data?.data;
 			if (typeof url === "string" && url.startsWith("http")) {
 				window.location.href = url;
