@@ -51,6 +51,7 @@ public class SocialAccountController {
     private String tiktokClientKey;
 
     @Value("${app.tiktok.client-secret:${TIKTOK_CLIENT_SECRET:}}")
+    import java.io.IOException;
     private String tiktokClientSecret;
 
     @Value("${app.cloudinary.cloud-name:${CLOUDINARY_CLOUD_NAME:}}")
@@ -59,16 +60,9 @@ public class SocialAccountController {
     @Value("${app.cloudinary.api-key:${CLOUDINARY_API_KEY:}}")
     private String cloudinaryApiKey;
 
-    @Value("${app.cloudinary.api-secret:${CLOUDINARY_API_SECRET:}}")
-    private String cloudinaryApiSecret;
-
-    private String frontendPath(String path) {
-        return frontendUrl + path;
-    }
-
-    private boolean hasValue(String value) {
-        return value != null && !value.isBlank();
-    }
+        private void redirect(HttpServletResponse response) throws IOException {
+            response.sendRedirect(frontendUrl + "/dashboard/accounts?status=success");
+        }
 
     private void redirectFailed(HttpServletResponse response, String reason) throws Exception {
         String encodedReason = URLEncoder.encode(reason, StandardCharsets.UTF_8);
@@ -82,15 +76,20 @@ public class SocialAccountController {
         return ResponseEntity.ok(ApiResponse.ok(url));
     }
 
+<<<<<<< HEAD
     @GetMapping("/config")
     public ResponseEntity<ApiResponse<Map<String, Boolean>>> getPlatformConfig() {
         return ResponseEntity.ok(ApiResponse.ok(Map.of(
             "facebook", hasValue(facebookClientId) && hasValue(facebookClientSecret),
             "instagram", hasValue(instagramClientId) && hasValue(instagramClientSecret),
             "threads", hasValue(threadsClientId) && hasValue(threadsClientSecret),
-            "tiktok", hasValue(tiktokClientKey) && hasValue(tiktokClientSecret),
+            redirect(response);
             "cloudinary", hasValue(cloudinaryCloudName) && hasValue(cloudinaryApiKey) && hasValue(cloudinaryApiSecret)
         )));
+=======
+    private void redirect(HttpServletResponse response) throws IOException {
+        response.sendRedirect(frontendUrl + "/dashboard/accounts?status=success");
+>>>>>>> 3445fc14962b3c9fae27fefc3d4a774127a5382e
     }
 
     @GetMapping("/callback/facebook")
@@ -105,7 +104,8 @@ public class SocialAccountController {
             return;
         }
 
-        if (code == null || state == null) {
+<<<<<<< HEAD
+            redirect(response);
             redirectFailed(response, "Missing OAuth code/state in Facebook callback");
             return;
         }
@@ -117,12 +117,17 @@ public class SocialAccountController {
         } catch (Exception ex) {
             redirectFailed(response, ex.getMessage() != null ? ex.getMessage() : "Facebook connection failed");
         }
+=======
+        String username = jwtUtil.getUsernameFromToken(state);
+        socialAccountService.connectFacebookAccount(code, username);
+        redirect(response);
+>>>>>>> 3445fc14962b3c9fae27fefc3d4a774127a5382e
     }
 
     @GetMapping("/callback/instagram")
     public void handleInstagramCallback(
         @RequestParam(name = "code", required = false) String code,
-        @RequestParam(name = "error", required = false) String error,
+            redirect(response);
         @RequestParam(name = "state", required = false) String state,
         HttpServletResponse response
     ) throws Exception {
@@ -138,13 +143,17 @@ public class SocialAccountController {
 
         String username = jwtUtil.getUsernameFromToken(state);
         socialAccountService.connectInstagramAccount(code, username);
+<<<<<<< HEAD
         response.sendRedirect(frontendPath("/success"));
+=======
+        redirect(response);
+>>>>>>> 3445fc14962b3c9fae27fefc3d4a774127a5382e
     }
 
     @GetMapping("/callback/threads")
     public void handleThreadsCallback(
         @RequestParam(name = "code", required = false) String code,
-        @RequestParam(name = "error", required = false) String error,
+            redirect(response);
         @RequestParam(name = "state", required = false) String state,
         HttpServletResponse response
     ) throws Exception {
@@ -160,7 +169,11 @@ public class SocialAccountController {
 
         String username = jwtUtil.getUsernameFromToken(state);
         socialAccountService.connectThreadsAccount(code, username);
+<<<<<<< HEAD
         response.sendRedirect(frontendPath("/success"));
+=======
+        redirect(response);
+>>>>>>> 3445fc14962b3c9fae27fefc3d4a774127a5382e
     }
 
     @GetMapping("/callback/tiktok")
@@ -187,7 +200,11 @@ public class SocialAccountController {
 
 
         socialAccountService.connectTikTokAccount(code, codeVerifier, username);
+<<<<<<< HEAD
         response.sendRedirect(frontendPath("/success"));
+=======
+        redirect(response);
+>>>>>>> 3445fc14962b3c9fae27fefc3d4a774127a5382e
     }
 
     @GetMapping
