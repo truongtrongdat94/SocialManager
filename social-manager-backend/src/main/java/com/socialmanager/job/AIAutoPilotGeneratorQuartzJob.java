@@ -1,7 +1,7 @@
 package com.socialmanager.job;
 
 import com.socialmanager.model.AutoPilotConfig;
-import com.socialmanager.service.AutoPilotService;
+import com.socialmanager.service.autopilot.AutoPilotService;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 

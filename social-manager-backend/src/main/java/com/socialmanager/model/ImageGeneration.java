@@ -39,16 +39,17 @@ public class ImageGeneration {
 
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Array(length = 10)
-    @Column(name = "cloudinary_urls", columnDefinition = "TEXT[]")
+    @Column(name = "cloudinary_urls")
     private String[] cloudinaryUrls;
 
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Array(length = 10)
-    @Column(name = "cloudinary_public_ids", columnDefinition = "TEXT[]")
+    @Column(name = "cloudinary_public_ids")
     private String[] cloudinaryPublicIds;
 
     @Column(name = "model_id")
-    private String modelId;
+    @Builder.Default
+    private String modelId = "leonardo-ai";
 
     private Integer width;
     private Integer height;

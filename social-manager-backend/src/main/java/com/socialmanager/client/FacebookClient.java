@@ -18,13 +18,13 @@ import java.util.List;
 public class FacebookClient {
     private final RestTemplate restTemplate = new RestTemplate();
 
-    @Value("${FACEBOOK_CLIENT_ID}")
+    @Value("${app.facebook.client-id:${app.meta.app-id:${META_APP_ID:${FACEBOOK_CLIENT_ID:}}}}")
     private String facebookClientId;
 
-    @Value("${FACEBOOK_CLIENT_SECRET}")
+    @Value("${app.facebook.client-secret:${app.meta.app-secret:${META_APP_SECRET:${FACEBOOK_CLIENT_SECRET:}}}}")
     private String facebookClientSecret;
 
-    @Value("${FACEBOOK_REDIRECT_URI}")
+    @Value("${app.facebook.redirect-uri:${app.meta.redirect-uri:${META_REDIRECT_URI:${FACEBOOK_REDIRECT_URI:http://localhost:8080/api/social-accounts/callback/facebook}}}}")
     private String facebookRedirectUri;
 
     public String getAuthUrl(String stateJwt) {
@@ -33,7 +33,8 @@ public class FacebookClient {
                 "?client_id=%s" +
                 "&redirect_uri=%s" +
                 "&response_type=code" +
-                "&scope=pages_manage_metadata,pages_manage_posts,pages_read_engagement,pages_show_list" +
+                "&scope=pages_manage_metadata,pages_manage_posts,pages_manage_engagement,pages_read_engagement,pages_show_list" +
+                "&auth_type=reauthenticate" +
                 "&state=%s",
             facebookClientId,
             URLEncoder.encode(facebookRedirectUri, StandardCharsets.UTF_8),

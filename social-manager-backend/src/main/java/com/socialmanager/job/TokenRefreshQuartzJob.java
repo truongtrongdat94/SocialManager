@@ -1,12 +1,12 @@
 package com.socialmanager.job;
 
 import com.socialmanager.repository.SocialAccountRepository;
-import com.socialmanager.service.SocialAccountService;
+import com.socialmanager.service.account.SocialAccountService;
 import com.socialmanager.model.SocialAccount;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.quartz.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 import org.springframework.stereotype.Component;
 
@@ -16,11 +16,13 @@ import java.util.List;
 @Slf4j
 @Component
 @DisallowConcurrentExecution
-@RequiredArgsConstructor
 public class TokenRefreshQuartzJob extends QuartzJobBean {
 
-    private final SocialAccountRepository socialAccountRepository;
-    private final SocialAccountService socialAccountService;
+    @Autowired
+    private SocialAccountRepository socialAccountRepository;
+
+    @Autowired
+    private SocialAccountService socialAccountService;
 
     @Override
     protected void executeInternal(@NonNull JobExecutionContext context) {

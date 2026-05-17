@@ -1,6 +1,5 @@
-import { icons, platforms } from "@/constants";
-import { Button } from "@/components";
-import { useSocialAccountStore } from "@/stores";
+import {icons, platforms} from "@/constants"
+import {Button} from "@/components"
 
 export const AddSocialAccountModal = () => {
 	const connectAccount = useSocialAccountStore((s) => s.connectAccount);
@@ -26,6 +25,7 @@ export const AddSocialAccountModal = () => {
 							</Button>
 						)
 					)
+>>>>>>> upstream/dev
 				}
 			</div>
 		</div>

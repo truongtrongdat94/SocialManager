@@ -1,5 +1,10 @@
+<<<<<<< HEAD
+import { useRef, useState } from "react";
+import { Card, Button, FileInput, Input } from "@/components";
+=======
 import { useRef } from "react";
 import { Card, Button, FileInput } from "@/components";
+>>>>>>> upstream/dev
 import { Info, Upload, X } from "lucide-react";
 import { cn } from "@/utils";
 
@@ -10,15 +15,39 @@ export interface MediaFile {
 	type: "image" | "video";
 }
 
+<<<<<<< HEAD
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 150 * 1024 * 1024;
+
+const formatBytes = (bytes: number) => {
+	if (bytes < 1024) return `${bytes} B`;
+	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const getSizeLimitByType = (type: "image" | "video") => (type === "image" ? MAX_IMAGE_BYTES : MAX_VIDEO_BYTES);
+
+=======
+>>>>>>> upstream/dev
 interface MediaAttachmentProps {
 	mediaFiles: MediaFile[];
 	onFilesSelect: (files: File[]) => void;
 	onRemove: (id: string) => void;
 	onPreview: (media: MediaFile) => void;
+<<<<<<< HEAD
+	mediaUrls: string[];
+	onMediaUrlsChange: (values: string[]) => void;
+}
+
+export const MediaAttachment = ({ mediaFiles, onFilesSelect, onRemove, onPreview, mediaUrls, onMediaUrlsChange }: MediaAttachmentProps) => {
+	const inputRef = useRef<HTMLInputElement>(null);
+	const [linkInput, setLinkInput] = useState<string>("");
+=======
 }
 
 export const MediaAttachment = ({ mediaFiles, onFilesSelect, onRemove, onPreview }: MediaAttachmentProps) => {
 	const inputRef = useRef<HTMLInputElement>(null);
+>>>>>>> upstream/dev
 
 	return (
 		<Card className="flex flex-col gap-4 min-h-fit flex-9 h-full min-w-0">
@@ -30,6 +59,10 @@ export const MediaAttachment = ({ mediaFiles, onFilesSelect, onRemove, onPreview
 				        "hover:bg-surface-secondary transition duration-200")}>
 				<Upload size={32} strokeWidth={1.5}/>
 				<div className="font-medium">Kéo thả file vào đây hoặc click để chọn</div>
+<<<<<<< HEAD
+				<div className="text-xs text-text-secondary">Giới hạn thực tế: Ảnh ≤ 10MB, Video ≤ 150MB</div>
+=======
+>>>>>>> upstream/dev
 				<FileInput
 					ref={inputRef}
 					accept="image/*,video/*"
@@ -99,6 +132,71 @@ export const MediaAttachment = ({ mediaFiles, onFilesSelect, onRemove, onPreview
 			<div className="text-text-secondary text-sm h-5">
 				{mediaFiles.length > 0 ? `${mediaFiles.length} file đã chọn` : " "}
 			</div>
+<<<<<<< HEAD
+
+			{mediaFiles.length > 0 ? (
+				<div className="max-h-24 overflow-y-auto text-xs text-text-secondary rounded-md border border-border px-2 py-1">
+					{mediaFiles.map((media) => {
+						const limit = getSizeLimitByType(media.type);
+						const withinLimit = media.file.size <= limit;
+						return (
+							<div key={`${media.id}-size`} className="flex items-center justify-between gap-2 py-0.5">
+								<span className="truncate" title={media.file.name}>{media.file.name}</span>
+								<span className={withinLimit ? "text-green-700" : "text-red-700"}>
+									{formatBytes(media.file.size)} / {formatBytes(limit)} - {withinLimit ? "Trong giới hạn" : "Vượt giới hạn"}
+								</span>
+							</div>
+						);
+					})}
+				</div>
+			) : null}
+
+			<div className="flex flex-col gap-2">
+				<div>Link media (tuỳ chọn)</div>
+				<div className="flex gap-2">
+					<Input
+						value={linkInput}
+						onChange={(event) => setLinkInput(event.target.value)}
+						placeholder="https://..."
+					/>
+					<Button
+						variant="solid"
+						color="primary"
+						onClick={() => {
+							const trimmed = linkInput.trim();
+							if (!trimmed) return;
+							const merged = Array.from(new Set([...(mediaUrls || []), trimmed]));
+							onMediaUrlsChange(merged);
+							setLinkInput("");
+						}}
+					>
+						Thêm
+					</Button>
+				</div>
+				<div className="text-text-secondary text-sm">Dùng khi bạn muốn đăng bằng link ảnh/video.</div>
+
+				{mediaUrls && mediaUrls.length > 0 ? (
+					<div className="flex flex-col gap-1 text-sm">
+						{mediaUrls.map((url, idx) => (
+							<div key={`link-${idx}`} className="flex items-center justify-between gap-2">
+								<a href={url} target="_blank" rel="noreferrer" className="truncate text-accent">{url}</a>
+								<button
+									onClick={() => {
+										const copy = [...mediaUrls];
+										copy.splice(idx, 1);
+										onMediaUrlsChange(copy);
+									}}
+									className="text-red-600 text-xs"
+								>
+									Xóa
+								</button>
+							</div>
+						))}
+					</div>
+				) : null}
+			</div>
+=======
+>>>>>>> upstream/dev
 		</Card>
 	);
 };

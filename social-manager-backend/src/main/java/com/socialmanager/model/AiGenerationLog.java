@@ -28,9 +28,13 @@ public class AiGenerationLog {
     @Column(name = "result_caption", columnDefinition = "TEXT")
     private String resultCaption;
 
+    @Column(name = "ai_model")
+    @Builder.Default
+    private String aiModel = "gemini-3-flash-preview";
+
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Array(length = 10)
-    @Column(name = "image_urls", columnDefinition = "TEXT[]")
+    @Column(name = "image_urls")
     private String[] imageUrls;
 
     @Column(name = "created_at", updatable = false)

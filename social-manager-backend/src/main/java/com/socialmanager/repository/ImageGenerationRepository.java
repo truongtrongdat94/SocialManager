@@ -1,21 +1,22 @@
 package com.socialmanager.repository;
 
 import com.socialmanager.model.ImageGeneration;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
-@Repository
 public interface ImageGenerationRepository extends JpaRepository<ImageGeneration, UUID> {
-    
-    // Tìm các yêu cầu đang chờ xử lý
-    List<ImageGeneration> findByStatus(String status);
-    
-    // Tìm các yêu cầu của một User cụ thể
+
+    Optional<ImageGeneration> findByIdAndUser_Id(UUID id, UUID userId);
+
+    List<ImageGeneration> findByUser_IdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
+
     List<ImageGeneration> findByUserId(UUID userId);
 
-    // Lấy danh sách mới nhất
+    List<ImageGeneration> findByStatus(String status);
+
     List<ImageGeneration> findAllByOrderByCreatedAtDesc();
 }

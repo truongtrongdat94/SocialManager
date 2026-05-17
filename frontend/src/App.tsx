@@ -1,7 +1,9 @@
 import { createBrowserRouter, RouterProvider, Navigate } from "react-router";
 import { Toaster, toast, ToastBar } from "react-hot-toast";
 import { AuthLayout, DashboardLayout } from "@/layouts";
-import { Accounts, Post, Stats, Login, Register, AuthCallback } from "@/pages";
+import Failed from "@/pages/Failed.tsx";
+import AuthCallback from "@/pages/AuthCallback";
+import { Accounts, Post, Stats, SetupGuide, Login, Register } from "@/pages";
 import { Modal, ProtectedRoute } from "@/components";
 
 const router = createBrowserRouter([
@@ -24,6 +26,7 @@ const router = createBrowserRouter([
 			{ path: "accounts", element: <Accounts /> },
 			{ path: "post", element: <Post /> },
 			{ path: "stats", element: <Stats /> },
+			{ path: "setup", element: <SetupGuide /> },
 		],
 	},
 	{ path: "/", element: <Navigate to="/dashboard/accounts" replace /> },

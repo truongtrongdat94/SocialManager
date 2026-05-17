@@ -8,6 +8,13 @@ export default defineConfig({
       react(),
       tailwindcss()
   ],
+<<<<<<< HEAD
+  build: {
+    outDir: '../social-manager-backend/src/main/resources/static',
+    emptyOutDir: true,
+  },
+=======
+>>>>>>> upstream/dev
   server: {
     port: 3000,
     proxy: {

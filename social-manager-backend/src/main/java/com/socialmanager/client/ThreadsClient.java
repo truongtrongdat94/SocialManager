@@ -2,7 +2,6 @@ package com.socialmanager.client;
 
 import com.socialmanager.dto.external.*;
 import com.socialmanager.exception.ExternalApiCallException;
-import com.socialmanager.service.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -22,13 +21,13 @@ import java.nio.charset.StandardCharsets;
 public class ThreadsClient {
     private final RestTemplate restTemplate = new RestTemplate();
 
-    @Value("${THREADS_CLIENT_ID}")
+    @Value("${app.threads.client-id:${THREADS_CLIENT_ID:}}")
     private String threadsClientId;
 
-    @Value("${THREADS_CLIENT_SECRET}")
+    @Value("${app.threads.client-secret:${THREADS_CLIENT_SECRET:}}")
     private String threadsClientSecret;
 
-    @Value("${THREADS_REDIRECT_URI}")
+    @Value("${app.threads.redirect-uri:${THREADS_REDIRECT_URI:http://localhost:8080/api/social-accounts/callback/threads}}")
     private String threadsRedirectUri;
 
     public String getAuthUrl(String stateJwt) {

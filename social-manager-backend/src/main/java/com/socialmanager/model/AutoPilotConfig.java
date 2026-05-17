@@ -35,7 +35,7 @@ public class AutoPilotConfig {
 
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Array(length = 20)
-    @Column(columnDefinition = "TEXT[]")
+    @Column
     private String[] keywords;
 
     @Builder.Default
