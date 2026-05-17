@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 import { useRef, useState } from "react";
 import { Card, Button, FileInput, Input } from "@/components";
+=======
+import { useRef } from "react";
+import { Card, Button, FileInput } from "@/components";
+>>>>>>> upstream/dev
 import { Info, Upload, X } from "lucide-react";
 import { cn } from "@/utils";
 
@@ -10,6 +15,7 @@ export interface MediaFile {
 	type: "image" | "video";
 }
 
+<<<<<<< HEAD
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const MAX_VIDEO_BYTES = 150 * 1024 * 1024;
 
@@ -21,11 +27,14 @@ const formatBytes = (bytes: number) => {
 
 const getSizeLimitByType = (type: "image" | "video") => (type === "image" ? MAX_IMAGE_BYTES : MAX_VIDEO_BYTES);
 
+=======
+>>>>>>> upstream/dev
 interface MediaAttachmentProps {
 	mediaFiles: MediaFile[];
 	onFilesSelect: (files: File[]) => void;
 	onRemove: (id: string) => void;
 	onPreview: (media: MediaFile) => void;
+<<<<<<< HEAD
 	mediaUrls: string[];
 	onMediaUrlsChange: (values: string[]) => void;
 }
@@ -33,6 +42,12 @@ interface MediaAttachmentProps {
 export const MediaAttachment = ({ mediaFiles, onFilesSelect, onRemove, onPreview, mediaUrls, onMediaUrlsChange }: MediaAttachmentProps) => {
 	const inputRef = useRef<HTMLInputElement>(null);
 	const [linkInput, setLinkInput] = useState<string>("");
+=======
+}
+
+export const MediaAttachment = ({ mediaFiles, onFilesSelect, onRemove, onPreview }: MediaAttachmentProps) => {
+	const inputRef = useRef<HTMLInputElement>(null);
+>>>>>>> upstream/dev
 
 	return (
 		<Card className="flex flex-col gap-4 min-h-fit flex-9 h-full min-w-0">
@@ -44,7 +59,10 @@ export const MediaAttachment = ({ mediaFiles, onFilesSelect, onRemove, onPreview
 				        "hover:bg-surface-secondary transition duration-200")}>
 				<Upload size={32} strokeWidth={1.5}/>
 				<div className="font-medium">Kéo thả file vào đây hoặc click để chọn</div>
+<<<<<<< HEAD
 				<div className="text-xs text-text-secondary">Giới hạn thực tế: Ảnh ≤ 10MB, Video ≤ 150MB</div>
+=======
+>>>>>>> upstream/dev
 				<FileInput
 					ref={inputRef}
 					accept="image/*,video/*"
@@ -114,6 +132,7 @@ export const MediaAttachment = ({ mediaFiles, onFilesSelect, onRemove, onPreview
 			<div className="text-text-secondary text-sm h-5">
 				{mediaFiles.length > 0 ? `${mediaFiles.length} file đã chọn` : " "}
 			</div>
+<<<<<<< HEAD
 
 			{mediaFiles.length > 0 ? (
 				<div className="max-h-24 overflow-y-auto text-xs text-text-secondary rounded-md border border-border px-2 py-1">
@@ -176,6 +195,8 @@ export const MediaAttachment = ({ mediaFiles, onFilesSelect, onRemove, onPreview
 					</div>
 				) : null}
 			</div>
+=======
+>>>>>>> upstream/dev
 		</Card>
 	);
 };

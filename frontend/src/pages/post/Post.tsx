@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components";
+<<<<<<< HEAD
 import axiosInstance from "@/libs/axios";
+=======
+>>>>>>> upstream/dev
 import { useSocialAccountStore, useModalStore } from "@/stores";
 import { AccountSelection, SchedulePost, CaptionInput, MediaAttachment } from "./components";
 
@@ -11,6 +14,7 @@ interface MediaFile {
 	type: "image" | "video";
 }
 
+<<<<<<< HEAD
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const MAX_VIDEO_BYTES = 150 * 1024 * 1024;
 
@@ -22,6 +26,11 @@ const formatLimitText = (bytes: number) => `${Math.round(bytes / (1024 * 1024))}
 export const Post = () => {
 	const accounts = useSocialAccountStore((state) => state.accounts);
 	const fetchAccounts = useSocialAccountStore((state) => state.fetchAccounts);
+=======
+
+export const Post = () => {
+	const accounts = useSocialAccountStore((state) => state.accounts);
+>>>>>>> upstream/dev
 	const openModal = useModalStore((state) => state.open);
 
 	const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([]);
@@ -31,6 +40,7 @@ export const Post = () => {
 	const [minute, setMinute] = useState(50);
 	const [caption, setCaption] = useState("");
 	const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
+<<<<<<< HEAD
 	const [mediaUrls, setMediaUrls] = useState<string[]>([]);
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState("");
@@ -46,6 +56,8 @@ export const Post = () => {
 	useEffect(() => {
 		fetchAccounts();
 	}, [fetchAccounts]);
+=======
+>>>>>>> upstream/dev
 
 	const handleToggleAccount = (accountId: string) => {
 		setSelectedAccountIds((prevSelected) => {
@@ -95,6 +107,7 @@ export const Post = () => {
 		};
 	}, []);
 
+<<<<<<< HEAD
 	const buildScheduledTime = () => {
 		if (!isDatePick) {
 			return toLocalDatetimeInputValue(new Date(Date.now() + 60 * 1000));
@@ -214,6 +227,8 @@ export const Post = () => {
 		};
 	}, [queued, queuedPostIds]);
 
+=======
+>>>>>>> upstream/dev
 	return (
 		<div className="flex h-full flex-col gap-4">
 			<div className="flex justify-between">
@@ -221,6 +236,7 @@ export const Post = () => {
 					<div className="text-2xl font-bold">Đăng bài</div>
 					<div className="text-text-secondary text-sm">Tạo và đăng bài lên các nền tảng</div>
 				</div>
+<<<<<<< HEAD
 				<Button variant="solid" color="primary" onClick={handleSubmit} disabled={submitting}>
 					{submitting ? "Đang đăng..." : "Đăng bài"}
 				</Button>
@@ -240,6 +256,11 @@ export const Post = () => {
 				</div>
 			)}
 
+=======
+				<Button variant="solid" color="primary">Đăng bài</Button>
+			</div>
+
+>>>>>>> upstream/dev
 			<div className="flex flex-col h-full gap-4">
 				<div className="flex gap-4 flex-4">
 					<AccountSelection accounts={accounts} selectedIds={selectedAccountIds} onToggle={handleToggleAccount}/>
@@ -258,8 +279,11 @@ export const Post = () => {
 						onFilesSelect={handleFilesSelect}
 						onRemove={handleRemoveMedia}
 						onPreview={handlePreviewClick}
+<<<<<<< HEAD
 						mediaUrls={mediaUrls}
 						onMediaUrlsChange={setMediaUrls}
+=======
+>>>>>>> upstream/dev
 					/>
 				</div>
 			</div>

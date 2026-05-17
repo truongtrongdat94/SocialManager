@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { useEffect, useState } from "react";
 import { icons, platforms } from "@/constants"
 import { Button } from "@/components"
@@ -80,6 +81,24 @@ export const AddSocialAccountModal = () => {
 							</Button>
 						);
 					})
+=======
+import {icons, platforms} from "@/constants"
+import {Button} from "@/components"
+
+export const AddSocialAccountModal = () => {
+	return (
+		<div className="flex flex-col gap-4">
+			<div>Chọn nền tảng</div>
+			<div className="grid grid-cols-2 gap-2">
+				{
+					platforms.map((platform) =>  (
+							<Button variant="soft" className="flex flex-col items-center gap-2 px-24 py-8 cursor-pointer h-fit" key={platform}>
+								<img src={icons[platform.toLowerCase()]} alt={platform} className="w-12 h-12" />
+								<div>{platform}</div>
+							</Button>
+						)
+					)
+>>>>>>> upstream/dev
 				}
 			</div>
 		</div>

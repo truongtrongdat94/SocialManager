@@ -1,9 +1,18 @@
 import { Button, Dropdown, type DropdownZone } from "@/components";
+<<<<<<< HEAD
 import { EllipsisVertical, Globe, Send, ChartColumn, LogOut, Pencil, User, Wrench } from "lucide-react";
 import { useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { cn } from "@/utils";
 import { getValidToken } from "@/utils/auth";
+=======
+import { EllipsisVertical, Globe, Send, ChartColumn, LogOut, Pencil, User } from "lucide-react";
+import { Outlet, useLocation, useNavigate } from "react-router";
+import { cn } from "@/utils";
+import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
+import AuthApi from "@/apis/auth.api.ts";
+>>>>>>> upstream/dev
 
 const sideBarButtons = [
 	{
@@ -21,16 +30,20 @@ const sideBarButtons = [
 		path: "stats",
 		icon: ChartColumn,
 	},
+<<<<<<< HEAD
 	{
 		title: "Cấu hình",
 		path: "setup",
 		icon: Wrench,
 	},
+=======
+>>>>>>> upstream/dev
 ];
 
 export const DashboardLayout = () => {
 	const { pathname } = useLocation();
 	const navigate = useNavigate();
+<<<<<<< HEAD
 
 	useEffect(() => {
 		const token = getValidToken();
@@ -47,6 +60,35 @@ export const DashboardLayout = () => {
 
 	const isActive = (path: string) => pathname.includes(path);
 	const profileActions: DropdownZone[] = [
+=======
+	const isActive = (path: string) => pathname.includes(path);
+	const [user, setUser] = useState<{ name: string; username: string } | null>(null);
+
+	useEffect(() => {
+		// Lấy thông tin user khi component mount
+		const fetchUser = async () => {
+			try {
+				const response = await AuthApi.getMe();
+				setUser({
+					name: response.data.data.name,
+					username: response.data.data.username,
+				});
+			} catch (error) {
+				console.error("Failed to fetch user:", error);
+			}
+		};
+
+		fetchUser();
+	}, []);
+
+	const handleLogout = () => {
+		localStorage.removeItem("token");
+		toast.success("Đã đăng xuất");
+		navigate("/login");
+	};
+
+	const actionZones: DropdownZone[] = [
+>>>>>>> upstream/dev
 		{
 			actions: [
 				{
@@ -105,12 +147,21 @@ export const DashboardLayout = () => {
 									<User strokeWidth={1.5} size={20} />
 								</div>
 								<div className="flex flex-col min-w-0 flex-1">
+<<<<<<< HEAD
 									<div className="text-left font-semibold truncate">Tên hiển thị</div>
 									<div className="text-sm text-left text-text-secondary">@username</div>
 								</div>
 							</Button>
 						}
 						zones={profileActions}
+=======
+									<div className="text-left font-semibold truncate">{user?.name || "Loading..."}</div>
+									<div className="text-sm text-left text-text-secondary">@{user?.username || "..."}</div>
+								</div>
+							</Button>
+						}
+						zones={actionZones}
+>>>>>>> upstream/dev
 					/>
 				</div>
 

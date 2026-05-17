@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 import { useEffect } from "react";
+=======
+>>>>>>> upstream/dev
 import { Button } from "@/components";
 import { useSocialAccountStore, useModalStore } from "@/stores";
 import { AddSocialAccountModal } from "./components/AddSocialAccountModal.tsx";
@@ -14,6 +17,7 @@ import {
 } from "lucide-react";
 
 export const Accounts = () => {
+<<<<<<< HEAD
 	const AccountAvatar = ({ src, platform, alt }: { src?: string; platform: string; alt?: string }) => {
 		const fallback = icons[platform.toLowerCase()];
 		return (
@@ -34,15 +38,23 @@ export const Accounts = () => {
 	);
 	const loading = useSocialAccountStore((state) => state.loading);
 	const fetchAccounts = useSocialAccountStore((state) => state.fetchAccounts);
+=======
+	const accounts = useSocialAccountStore(
+		(state) => state.accounts
+	);
+>>>>>>> upstream/dev
 
 	const openModal = useModalStore(
 		(state) => state.open
 	);
 
+<<<<<<< HEAD
 	useEffect(() => {
 		fetchAccounts();
 	}, [fetchAccounts]);
 
+=======
+>>>>>>> upstream/dev
 	const handleReconnect = (
 		id: string
 	) => {
@@ -88,6 +100,7 @@ export const Accounts = () => {
 					</thead>
 
 					<tbody>
+<<<<<<< HEAD
 						{loading ? (
 							<tr>
 								<td colSpan={3} className="px-4 py-8 text-center text-text-secondary">
@@ -145,6 +158,47 @@ export const Accounts = () => {
 								</tr>
 							))
 						)}
+=======
+						{accounts.map((account) => (
+							<tr
+								key={account.id}
+								className="border-b border-border transition-colors hover:bg-surface-secondary"
+							>
+								<td className="px-4 py-3">
+									<div className="flex items-center gap-2">
+										<img src={account.profilePictureUrl} alt={account.accountName} className="h-10 w-10 rounded-full object-cover"/>
+
+										<div className="font-medium">
+											{account.accountName}
+										</div>
+									</div>
+								</td>
+
+								<td className="px-4 py-3">
+									<div className="flex items-center gap-2">
+										<img className="h-6 w-6" src={icons[account.platform.toLowerCase()]} alt={account.platform}/>
+										<div>
+											{platforms.find((platform) => platform.toUpperCase() === account.platform)}
+										</div>
+									</div>
+								</td>
+
+								<td className="px-4 py-3">
+									<div className="flex items-center gap-2">
+										<Button title="Kết nối lại" variant="soft" color="primary" className="h-8 w-8 p-0"
+										        onClick={() => handleReconnect(account.id)}>
+											<RefreshCw size={16} strokeWidth={1.5}/>
+										</Button>
+
+										<Button title="Xoá" variant="soft" color="danger" className="h-8 w-8 p-0" onClick={() => handleDelete(account.id)}
+										>
+											<Trash2 size={16} strokeWidth={1.5}/>
+										</Button>
+									</div>
+								</td>
+							</tr>
+						))}
+>>>>>>> upstream/dev
 					</tbody>
 				</table>
 			</div>
