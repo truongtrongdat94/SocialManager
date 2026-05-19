@@ -8,15 +8,21 @@ import com.socialmanager.exception.ExternalApiCallException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -38,7 +44,7 @@ public class FacebookClient {
                 "?client_id=%s" +
                 "&redirect_uri=%s" +
                 "&response_type=code" +
-                "&scope=pages_manage_metadata,pages_manage_posts,pages_read_engagement,pages_show_list" +
+                "&scope=pages_manage_posts,pages_read_engagement" +
                 "&state=%s",
             facebookClientId,
             URLEncoder.encode(facebookRedirectUri, StandardCharsets.UTF_8),
@@ -358,6 +364,53 @@ public class FacebookClient {
         } catch (HttpClientErrorException e) {
             throw new ExternalApiCallException("Lỗi khi lấy Post insights: " + e.getResponseBodyAsString());
         }
+    }
+
+    private FacebookGraphIdResponse postForm(String url, MultiValueMap<String, String> formData) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(formData, headers);
+
+        try {
+            return restTemplate.postForObject(url, entity, FacebookGraphIdResponse.class);
+        } catch (HttpClientErrorException e) {
+            throw new ExternalApiCallException("Lỗi khi đăng bài Facebook: " + e.getResponseBodyAsString());
+        }
+    }
+
+    public FacebookGraphIdResponse publishTextPost(String pageId, String pageAccessToken, String message) {
+        String url = "https://graph.facebook.com/v25.0/" + pageId + "/feed";
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("message", message);
+        form.add("access_token", pageAccessToken);
+        return postForm(url, form);
+    }
+
+    public FacebookGraphIdResponse uploadPhoto(String pageId, String pageAccessToken, String imageUrl, boolean published) {
+        String url = "https://graph.facebook.com/v25.0/" + pageId + "/photos";
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("url", imageUrl);
+        form.add("published", String.valueOf(published));
+        form.add("access_token", pageAccessToken);
+        return postForm(url, form);
+    }
+
+    public FacebookGraphIdResponse publishPhotoFeedPost(String pageId, String pageAccessToken, String message, List<String> photoIds) {
+        if (photoIds == null || photoIds.isEmpty()) {
+            return publishTextPost(pageId, pageAccessToken, message);
+        }
+
+        String url = "https://graph.facebook.com/v25.0/" + pageId + "/feed";
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("message", message);
+        form.add("access_token", pageAccessToken);
+
+        String attachedMedia = photoIds.stream()
+            .map(id -> "{\"media_fbid\":\"" + id + "\"}")
+            .collect(Collectors.joining(",", "[", "]"));
+        form.add("attached_media", attachedMedia);
+
+        return postForm(url, form);
     }
 }
 

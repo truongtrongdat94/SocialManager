@@ -20,10 +20,10 @@ import java.util.Map;
 @Slf4j
 public class ImageGenService {
 
-    @Value("${app.leonardo.api-key}")
+    @Value("${app.leonardo.api-key:}")
     private String apiKey;
 
-    @Value("${app.leonardo.url}")
+    @Value("${app.leonardo.url:}")
     private String apiUrl;
 
     private final RestTemplate restTemplate = new RestTemplate();

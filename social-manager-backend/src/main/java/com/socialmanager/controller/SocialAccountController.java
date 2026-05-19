@@ -2,6 +2,7 @@ package com.socialmanager.controller;
 
 import com.socialmanager.client.TikTokClient;
 import com.socialmanager.dto.ApiResponse;
+import com.socialmanager.dto.request.FacebookPublishRequest;
 import com.socialmanager.dto.SocialAccountDto;
 import com.socialmanager.exception.CsrfSecurityException;
 import com.socialmanager.exception.OAuthCallbackException;
@@ -23,7 +24,7 @@ import java.util.UUID;
 @RequestMapping("/api/social-accounts")
 @RequiredArgsConstructor
 public class SocialAccountController {
-    @Value("${FRONTEND_URL}")
+    @Value("${FRONTEND_URL:http://localhost:3000}")
     private String frontendUrl;
 
     private final JwtUtil jwtUtil;
@@ -31,9 +32,14 @@ public class SocialAccountController {
 
     @GetMapping("/connect/{platform}")
     public ResponseEntity<ApiResponse<String>> getConnectUrl(@PathVariable Platform platform, Authentication authentication) {
-        String username = authentication.getName();
-        String url = socialAccountService.generateAuthUrl(platform, username);
-        return ResponseEntity.ok(ApiResponse.ok(url));
+        try {
+            String username = authentication.getName();
+            String url = socialAccountService.generateAuthUrl(platform, username);
+            return ResponseEntity.ok(ApiResponse.ok(url));
+        } catch (Exception ex) {
+            String msg = ex.getMessage() != null ? ex.getMessage() : "Failed to generate connect URL";
+            return ResponseEntity.badRequest().body(ApiResponse.error(msg));
+        }
     }
 
     @GetMapping("/callback/facebook")
@@ -43,11 +49,19 @@ public class SocialAccountController {
         @RequestParam(name = "state", required = false) String state,
         HttpServletResponse response
     ) throws IOException {
-        if (error != null) throw new OAuthCallbackException("Facebook login error: " + error);
+        if (error != null) {
+            response.sendRedirect(frontendUrl + "/dashboard/accounts?status=error&reason=" + java.net.URLEncoder.encode(error, java.nio.charset.StandardCharsets.UTF_8));
+            return;
+        }
 
-        String username = jwtUtil.getUsernameFromToken(state);
-        socialAccountService.connectFacebookAccount(code, username);
-        response.sendRedirect(frontendUrl + "/success");
+        try {
+            String username = jwtUtil.getUsernameFromToken(state);
+            socialAccountService.connectFacebookAccount(code, username);
+            response.sendRedirect(frontendUrl + "/dashboard/accounts?status=success");
+        } catch (Exception ex) {
+            String msg = ex.getMessage() != null ? ex.getMessage() : "unknown";
+            response.sendRedirect(frontendUrl + "/dashboard/accounts?status=error&reason=" + java.net.URLEncoder.encode(msg, java.nio.charset.StandardCharsets.UTF_8));
+        }
     }
 
     @GetMapping("/callback/instagram")
@@ -57,11 +71,19 @@ public class SocialAccountController {
         @RequestParam(name = "state", required = false) String state,
         HttpServletResponse response
     ) throws IOException {
-        if (error != null) throw new OAuthCallbackException("Instagram login error: " + error);
+        if (error != null) {
+            response.sendRedirect(frontendUrl + "/dashboard/accounts?status=error&reason=" + java.net.URLEncoder.encode(error, java.nio.charset.StandardCharsets.UTF_8));
+            return;
+        }
 
-        String username = jwtUtil.getUsernameFromToken(state);
-        socialAccountService.connectInstagramAccount(code, username);
-        response.sendRedirect(frontendUrl + "/success");
+        try {
+            String username = jwtUtil.getUsernameFromToken(state);
+            socialAccountService.connectInstagramAccount(code, username);
+            response.sendRedirect(frontendUrl + "/dashboard/accounts?status=success");
+        } catch (Exception ex) {
+            String msg = ex.getMessage() != null ? ex.getMessage() : "unknown";
+            response.sendRedirect(frontendUrl + "/dashboard/accounts?status=error&reason=" + java.net.URLEncoder.encode(msg, java.nio.charset.StandardCharsets.UTF_8));
+        }
     }
 
     @GetMapping("/callback/threads")
@@ -71,11 +93,19 @@ public class SocialAccountController {
         @RequestParam(name = "state", required = false) String state,
         HttpServletResponse response
     ) throws IOException {
-        if (error != null) throw new OAuthCallbackException("Threads login error: " + error);
+        if (error != null) {
+            response.sendRedirect(frontendUrl + "/dashboard/accounts?status=error&reason=" + java.net.URLEncoder.encode(error, java.nio.charset.StandardCharsets.UTF_8));
+            return;
+        }
 
-        String username = jwtUtil.getUsernameFromToken(state);
-        socialAccountService.connectThreadsAccount(code, username);
-        response.sendRedirect(frontendUrl + "/success");
+        try {
+            String username = jwtUtil.getUsernameFromToken(state);
+            socialAccountService.connectThreadsAccount(code, username);
+            response.sendRedirect(frontendUrl + "/dashboard/accounts?status=success");
+        } catch (Exception ex) {
+            String msg = ex.getMessage() != null ? ex.getMessage() : "unknown";
+            response.sendRedirect(frontendUrl + "/dashboard/accounts?status=error&reason=" + java.net.URLEncoder.encode(msg, java.nio.charset.StandardCharsets.UTF_8));
+        }
     }
 
     @GetMapping("/callback/tiktok")
@@ -85,17 +115,25 @@ public class SocialAccountController {
         @RequestParam(name = "state", required = false) String state,
         HttpServletResponse response
     ) throws IOException {
-        if (error != null) throw new OAuthCallbackException("TikTok login error: " + error);
-
-        if (state == null || !TikTokClient.pkceStorage.containsKey(state)) {
-            throw new CsrfSecurityException("Lỗi: State không khớp hoặc đã hết hạn!");
+        if (error != null) {
+            response.sendRedirect(frontendUrl + "/dashboard/accounts?status=error&reason=" + java.net.URLEncoder.encode(error, java.nio.charset.StandardCharsets.UTF_8));
+            return;
         }
 
-        String codeVerifier = TikTokClient.pkceStorage.remove(state);
-        String username = jwtUtil.getUsernameFromToken(state);
+        try {
+            if (state == null || !TikTokClient.pkceStorage.containsKey(state)) {
+                throw new CsrfSecurityException("Lỗi: State không khớp hoặc đã hết hạn!");
+            }
 
-        socialAccountService.connectTikTokAccount(code, codeVerifier, username);
-        response.sendRedirect(frontendUrl + "/success");
+            String codeVerifier = TikTokClient.pkceStorage.remove(state);
+            String username = jwtUtil.getUsernameFromToken(state);
+
+            socialAccountService.connectTikTokAccount(code, codeVerifier, username);
+            response.sendRedirect(frontendUrl + "/dashboard/accounts?status=success");
+        } catch (Exception ex) {
+            String msg = ex.getMessage() != null ? ex.getMessage() : "unknown";
+            response.sendRedirect(frontendUrl + "/dashboard/accounts?status=error&reason=" + java.net.URLEncoder.encode(msg, java.nio.charset.StandardCharsets.UTF_8));
+        }
     }
 
     @GetMapping
@@ -130,6 +168,20 @@ public class SocialAccountController {
         socialAccountService.deleteSocialAccountById(id, username);
         return ResponseEntity.ok(
             ApiResponse.ok("Social account deleted successfully")
+        );
+    }
+
+    @PostMapping("/{id}/facebook/publish")
+    public ResponseEntity<ApiResponse<String>> publishFacebookPost(
+        @PathVariable UUID id,
+        @RequestBody FacebookPublishRequest request,
+        Authentication authentication
+    ) {
+        String username = authentication.getName();
+        String publishedId = socialAccountService.publishFacebookPost(id, username, request.getCaption(), request.getMediaUrls());
+
+        return ResponseEntity.ok(
+            ApiResponse.ok(publishedId)
         );
     }
 }
