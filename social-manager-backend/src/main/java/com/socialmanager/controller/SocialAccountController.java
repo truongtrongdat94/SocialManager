@@ -3,15 +3,18 @@ package com.socialmanager.controller;
 import com.socialmanager.client.TikTokClient;
 import com.socialmanager.dto.ApiResponse;
 import com.socialmanager.dto.request.FacebookPublishRequest;
+import com.socialmanager.dto.request.ScheduledPublishRequest;
 import com.socialmanager.dto.SocialAccountDto;
 import com.socialmanager.exception.CsrfSecurityException;
 import com.socialmanager.exception.OAuthCallbackException;
 import com.socialmanager.model.Platform;
 import com.socialmanager.service.SocialAccountService;
+import com.socialmanager.service.ScheduledPostService;
 import com.socialmanager.util.JwtUtil;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -29,9 +32,13 @@ public class SocialAccountController {
 
     private final JwtUtil jwtUtil;
     private final SocialAccountService socialAccountService;
+    private final ScheduledPostService scheduledPostService;
 
     @GetMapping("/connect/{platform}")
     public ResponseEntity<ApiResponse<String>> getConnectUrl(@PathVariable Platform platform, Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Unauthenticated"));
+        }
         try {
             String username = authentication.getName();
             String url = socialAccountService.generateAuthUrl(platform, username);
@@ -138,6 +145,9 @@ public class SocialAccountController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<SocialAccountDto>>> getMySocialAccounts(Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Unauthenticated"));
+        }
         String username = authentication.getName();
         return ResponseEntity.ok(
             ApiResponse.ok(
@@ -151,6 +161,9 @@ public class SocialAccountController {
         @PathVariable UUID id,
         Authentication authentication
     ) {
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Unauthenticated"));
+        }
         String username = authentication.getName();
         return ResponseEntity.ok(
             ApiResponse.ok(
@@ -164,6 +177,9 @@ public class SocialAccountController {
         @PathVariable UUID id,
         Authentication authentication
     ) {
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Unauthenticated"));
+        }
         String username = authentication.getName();
         socialAccountService.deleteSocialAccountById(id, username);
         return ResponseEntity.ok(
@@ -177,11 +193,31 @@ public class SocialAccountController {
         @RequestBody FacebookPublishRequest request,
         Authentication authentication
     ) {
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Unauthenticated"));
+        }
         String username = authentication.getName();
         String publishedId = socialAccountService.publishFacebookPost(id, username, request.getCaption(), request.getMediaUrls());
 
         return ResponseEntity.ok(
             ApiResponse.ok(publishedId)
+        );
+    }
+
+    @PostMapping("/{id}/facebook/schedule")
+    public ResponseEntity<ApiResponse<String>> scheduleFacebookPost(
+        @PathVariable UUID id,
+        @RequestBody ScheduledPublishRequest request,
+        Authentication authentication
+    ) {
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Unauthenticated"));
+        }
+        String username = authentication.getName();
+        java.util.UUID scheduledId = scheduledPostService.scheduleFacebookPost(id, username, request.getCaption(), request.getMediaUrls(), request.getScheduledTime());
+
+        return ResponseEntity.ok(
+            ApiResponse.ok(scheduledId.toString())
         );
     }
 }

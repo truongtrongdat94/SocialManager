@@ -34,7 +34,7 @@ public class SocialAccountService {
 
     private final JwtUtil jwtUtil;
 
-    @Value("${AES_SECRET}")
+    @Value("${app.aes-secret}")
     private String aesSecret;
 
     /**
@@ -184,6 +184,37 @@ public class SocialAccountService {
         }
 
 
+    }
+
+    @Transactional
+    public String publishFacebookPost(UUID accountId, String username, String caption, List<String> mediaUrls) {
+        UUID userId = userRepository.findByUsername(username).map(User::getId)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        SocialAccount account = socialAccountRepository.findByIdAndUserId(accountId, userId)
+            .orElseThrow(() -> new ResourceNotFoundException("Social account not found or access denied"));
+
+        if (account.getPlatform() != Platform.FACEBOOK) {
+            throw new IllegalArgumentException("Social account is not a Facebook account");
+        }
+
+        try {
+            String pageAccessToken = EncryptionUtil.decrypt(account.getAccessToken(), aesSecret);
+            String pageId = account.getExternalAccountId();
+
+            if (mediaUrls == null || mediaUrls.isEmpty()) {
+                return facebookClient.publishTextPost(pageId, pageAccessToken, caption).id();
+            }
+
+            List<String> photoIds = new ArrayList<>();
+            for (String mediaUrl : mediaUrls) {
+                photoIds.add(facebookClient.uploadPhoto(pageId, pageAccessToken, mediaUrl, false).id());
+            }
+
+            return facebookClient.publishPhotoFeedPost(pageId, pageAccessToken, caption, photoIds).id();
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi khi đăng bài Facebook", e);
+        }
     }
 
     public SocialAccountDto getSocialAccountByIdAndUsername(UUID id, String username) {
