@@ -65,6 +65,12 @@ public class SocialAccountService {
         );
     }
 
+    public UUID getUserIdByUsername(String username) {
+        return userRepository.findByUsername(username)
+            .map(User::getId)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    }
+
     public String generateAuthUrl(Platform platform, String username) {
         String stateJwt = jwtUtil.generateToken(username);
         return switch (platform) {

@@ -8,78 +8,102 @@ import com.socialmanager.repository.SocialAccountRepository;
 import com.socialmanager.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.annotation.PostConstruct;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Date;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class ScheduledPostService {
+    private static final String STATUS_PENDING = "PENDING";
+    private static final String STATUS_PROCESSING = "PROCESSING";
+    private static final String STATUS_POSTED = "POSTED";
+    private static final String STATUS_FAILED = "FAILED";
+
     private final ScheduledPostRepository scheduledPostRepository;
     private final SocialAccountRepository socialAccountRepository;
     private final UserRepository userRepository;
     private final SocialAccountService socialAccountService;
     private final TaskScheduler taskScheduler;
 
-    @Transactional
-    public UUID scheduleFacebookPost(UUID accountId, String username, String caption, List<String> mediaUrls, java.time.LocalDateTime scheduledTime) {
-        User user = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found"));
-        SocialAccount account = socialAccountRepository.findById(accountId).orElseThrow(() -> new RuntimeException("Social account not found"));
-        if (!account.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("Access denied");
-        }
-        ScheduledPost post = ScheduledPost.builder()
+    @PostConstruct
+    public void schedulePendingPosts() {
+        scheduledPostRepository.findByStatus(STATUS_PENDING).forEach(this::scheduleTask);
+    }
+
+    @Scheduled(fixedDelay = 30000)
+    public void processDueScheduledPosts() {
+        LocalDateTime now = LocalDateTime.now();
+        scheduledPostRepository.findByStatusAndScheduledTimeLessThanEqual(STATUS_PENDING, now)
+            .forEach(this::executePost);
+    }
+
+    public ScheduledPost scheduleFacebookPost(UUID accountId, String username, String caption, List<String> mediaUrls, LocalDateTime scheduledTime) {
+        User user = userRepository.findByUsername(username)
+            .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng"));
+
+        SocialAccount account = socialAccountRepository.findByIdAndUserId(accountId, user.getId())
+            .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy tài khoản Facebook"));
+
+        ScheduledPost scheduledPost = ScheduledPost.builder()
             .user(user)
             .socialAccount(account)
             .caption(caption)
-            .mediaUrls(mediaUrls == null ? null : mediaUrls.toArray(new String[0]))
+            .mediaUrls(mediaUrls != null ? mediaUrls.toArray(new String[0]) : new String[0])
             .scheduledTime(scheduledTime)
-            .status("PENDING")
+            .status(STATUS_PENDING)
+            .retryCount(0)
+            .isAutoPilot(Boolean.FALSE)
             .build();
 
-        scheduledPostRepository.save(post);
-
-        scheduleExecution(post);
-
-        return post.getId();
+        ScheduledPost saved = scheduledPostRepository.save(scheduledPost);
+        scheduleTask(saved);
+        return saved;
     }
 
-    private void scheduleExecution(ScheduledPost post) {
-        Date runAt = Date.from(post.getScheduledTime().atZone(ZoneId.systemDefault()).toInstant());
-        taskScheduler.schedule(() -> executePost(post.getId()), runAt);
+    private void scheduleTask(ScheduledPost scheduledPost) {
+        taskScheduler.schedule(() -> executePost(scheduledPost.getId()), scheduledPost.getScheduledTime().atZone(ZoneId.systemDefault()).toInstant());
     }
 
-    @Transactional
-    protected void executePost(UUID scheduledPostId) {
-        ScheduledPost post = scheduledPostRepository.findById(scheduledPostId).orElse(null);
-        if (post == null) return;
+    public synchronized void executePost(UUID scheduledPostId) {
+        ScheduledPost scheduledPost = scheduledPostRepository.findDetailedById(scheduledPostId)
+            .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bài đăng đã lên lịch"));
+
+        executePost(scheduledPost);
+    }
+
+    public synchronized void executePost(ScheduledPost scheduledPost) {
+
+        if (!STATUS_PENDING.equals(scheduledPost.getStatus())) {
+            return;
+        }
+
+        scheduledPost.setStatus(STATUS_PROCESSING);
+        scheduledPost.setProcessingStartedAt(LocalDateTime.now());
+        scheduledPostRepository.save(scheduledPost);
+
         try {
-            String publishedId = socialAccountService.publishFacebookPost(post.getSocialAccount().getId(), post.getUser().getUsername(), post.getCaption(), post.getMediaUrls() == null ? null : java.util.Arrays.asList(post.getMediaUrls()));
-            post.setStatus("POSTED");
-            post.setPublishedPostId(publishedId);
-            scheduledPostRepository.save(post);
-        } catch (Exception e) {
-            post.setStatus("FAILED");
-            post.setErrorMessage(e.getMessage());
-            scheduledPostRepository.save(post);
+            String publishedId = socialAccountService.publishFacebookPost(
+                scheduledPost.getSocialAccount().getId(),
+                scheduledPost.getUser().getUsername(),
+                scheduledPost.getCaption(),
+                scheduledPost.getMediaUrls() != null ? Arrays.asList(scheduledPost.getMediaUrls()) : List.of()
+            );
+            scheduledPost.setStatus(STATUS_POSTED);
+            scheduledPost.setPublishedPostId(publishedId);
+            scheduledPost.setErrorMessage(null);
+        } catch (Exception ex) {
+            scheduledPost.setStatus(STATUS_FAILED);
+            scheduledPost.setErrorMessage(ex.getMessage());
+            scheduledPost.setRetryCount((scheduledPost.getRetryCount() == null ? 0 : scheduledPost.getRetryCount()) + 1);
         }
-    }
 
-    @PostConstruct
-    public void schedulePendingPosts() {
-        List<ScheduledPost> pending = scheduledPostRepository.findByStatus("PENDING");
-        for (ScheduledPost post : pending) {
-            // If scheduled time is in the past, execute immediately
-            if (post.getScheduledTime().isBefore(java.time.LocalDateTime.now())) {
-                taskScheduler.schedule(() -> executePost(post.getId()), new Date());
-            } else {
-                scheduleExecution(post);
-            }
-        }
+        scheduledPostRepository.save(scheduledPost);
     }
 }

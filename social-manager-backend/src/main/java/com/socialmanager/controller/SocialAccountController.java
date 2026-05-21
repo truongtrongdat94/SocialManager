@@ -2,12 +2,16 @@ package com.socialmanager.controller;
 
 import com.socialmanager.client.TikTokClient;
 import com.socialmanager.dto.ApiResponse;
+import com.socialmanager.dto.ScheduledPostHistoryDto;
 import com.socialmanager.dto.request.FacebookPublishRequest;
+import com.socialmanager.dto.request.ScheduledPublishRequest;
 import com.socialmanager.dto.SocialAccountDto;
 import com.socialmanager.exception.CsrfSecurityException;
 import com.socialmanager.exception.OAuthCallbackException;
 import com.socialmanager.model.Platform;
+import com.socialmanager.repository.ScheduledPostRepository;
 import com.socialmanager.service.SocialAccountService;
+import com.socialmanager.service.ScheduledPostService;
 import com.socialmanager.util.JwtUtil;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +34,8 @@ public class SocialAccountController {
 
     private final JwtUtil jwtUtil;
     private final SocialAccountService socialAccountService;
+    private final ScheduledPostService scheduledPostService;
+    private final ScheduledPostRepository scheduledPostRepository;
 
     @GetMapping("/connect/{platform}")
     public ResponseEntity<ApiResponse<String>> getConnectUrl(@PathVariable Platform platform, Authentication authentication) {
@@ -199,5 +205,42 @@ public class SocialAccountController {
         return ResponseEntity.ok(
             ApiResponse.ok(publishedId)
         );
+    }
+
+    @PostMapping("/{id}/facebook/schedule")
+    public ResponseEntity<ApiResponse<String>> scheduleFacebookPost(
+        @PathVariable UUID id,
+        @RequestBody ScheduledPublishRequest request,
+        Authentication authentication
+    ) {
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Unauthenticated"));
+        }
+        String username = authentication.getName();
+        String scheduledPostId = scheduledPostService.scheduleFacebookPost(
+            id,
+            username,
+            request.getCaption(),
+            request.getMediaUrls(),
+            request.getScheduledTime()
+        ).getId().toString();
+
+        return ResponseEntity.ok(ApiResponse.ok(scheduledPostId));
+    }
+
+    @GetMapping("/scheduled-posts")
+    public ResponseEntity<ApiResponse<List<ScheduledPostHistoryDto>>> getScheduledPosts(Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Unauthenticated"));
+        }
+
+        String username = authentication.getName();
+        UUID userId = socialAccountService.getUserIdByUsername(username);
+        List<ScheduledPostHistoryDto> history = scheduledPostRepository.findByUserIdOrderByCreatedAtDesc(userId)
+            .stream()
+            .map(ScheduledPostHistoryDto::fromEntity)
+            .toList();
+
+        return ResponseEntity.ok(ApiResponse.ok(history));
     }
 }

@@ -43,6 +43,9 @@ public class ScheduledPost {
     @Column(nullable = false)
     private String status = "PENDING";
 
+    @Column(name = "processing_started_at")
+    private LocalDateTime processingStartedAt;
+
     @Column(name = "published_post_id")
     private String publishedPostId;
 

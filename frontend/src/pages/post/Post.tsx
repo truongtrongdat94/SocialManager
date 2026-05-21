@@ -57,15 +57,13 @@ export function Post() {
 		void (async () => {
 			try {
 				const body = { caption, mediaUrls: imageUrl ? [imageUrl] : [] };
-				if (postMode === "now") {
-					await api.post<ApiResponse<string>>(`/api/social-accounts/${selectedAccountId}/facebook/publish`, body);
-					toast.success("Đăng lên Facebook thành công.");
-				} else {
-					// schedule
-					if (!scheduledAt) throw new Error("Vui lòng chọn thời gian lên lịch.");
+				if (postMode === "schedule") {
 					const scheduledBody = { ...body, scheduledTime: scheduledAt };
 					await api.post<ApiResponse<string>>(`/api/social-accounts/${selectedAccountId}/facebook/schedule`, scheduledBody);
-					toast.success("Lên lịch bài đăng thành công.");
+					toast.success("Đã lên lịch bài đăng.");
+				} else {
+					await api.post<ApiResponse<string>>(`/api/social-accounts/${selectedAccountId}/facebook/publish`, body);
+					toast.success("Đăng lên Facebook thành công.");
 				}
 			} catch (err) {
 				toast.error(getApiErrorMessage(err));
@@ -188,7 +186,7 @@ export function Post() {
 							disabled={!canPublish || publishing}
 							className="h-12 w-full rounded-full bg-sky-600 px-5 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-60"
 						>
-							{publishing ? "Đang đăng..." : "Xác nhận đăng bài"}
+							{publishing ? "Đang đăng..." : postMode === "schedule" ? "Xác nhận đăng lịch" : "Xác nhận đăng bài"}
 						</button>
 					</div>
 				</section>
