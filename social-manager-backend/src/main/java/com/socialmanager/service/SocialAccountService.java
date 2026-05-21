@@ -34,7 +34,7 @@ public class SocialAccountService {
 
     private final JwtUtil jwtUtil;
 
-    @Value("${app.aes-secret}")
+    @Value("${app.aes-secret:}")
     private String aesSecret;
 
     /**
@@ -45,6 +45,12 @@ public class SocialAccountService {
         return userRepository.findByEmail(identifier)
                 .or(() -> userRepository.findByUsername(identifier))
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + identifier));
+    }
+
+    private void assertAesSecretConfigured() {
+        if (aesSecret == null || aesSecret.trim().isEmpty()) {
+            throw new IllegalStateException("Thiếu cấu hình app.aes-secret (AES_SECRET)");
+        }
     }
 
     private SocialAccountDto mapToDto(SocialAccount account) {
@@ -70,6 +76,7 @@ public class SocialAccountService {
     }
 
     private void saveSocialAccountToDatabase(User user, Platform platform, String externalId, String name, String alias, String pictureUrl, String accessToken, String refreshToken, Integer expiresInSeconds) throws Exception {
+        assertAesSecretConfigured();
         SocialAccount account = socialAccountRepository.findByUserIdAndPlatformAndExternalAccountId(user.getId(), platform, externalId).orElseGet(() -> SocialAccount.builder().user(user).platform(platform).isAutoPilot(false).build());
 
         account.setExternalAccountId(externalId);
@@ -143,6 +150,7 @@ public class SocialAccountService {
 
     @Transactional(rollbackFor = Exception.class)
     public void refreshAccessToken(UUID accountId) {
+        assertAesSecretConfigured();
         SocialAccount account = socialAccountRepository.findById(accountId)
             .orElseThrow(() -> new ResourceNotFoundException("Account not found with ID: " + accountId));
 
@@ -188,6 +196,7 @@ public class SocialAccountService {
 
     @Transactional
     public String publishFacebookPost(UUID accountId, String username, String caption, List<String> mediaUrls) {
+        assertAesSecretConfigured();
         UUID userId = userRepository.findByUsername(username).map(User::getId)
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 

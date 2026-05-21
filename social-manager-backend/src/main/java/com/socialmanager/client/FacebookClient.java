@@ -29,16 +29,29 @@ import java.util.stream.Collectors;
 public class FacebookClient {
     private final RestTemplate restTemplate;
 
-    @Value("${FACEBOOK_CLIENT_ID}")
+    @Value("${FACEBOOK_CLIENT_ID:}")
     private String facebookClientId;
 
-    @Value("${FACEBOOK_CLIENT_SECRET}")
+    @Value("${FACEBOOK_CLIENT_SECRET:}")
     private String facebookClientSecret;
 
-    @Value("${FACEBOOK_REDIRECT_URI}")
+    @Value("${FACEBOOK_REDIRECT_URI:${FACEBOOK_REDIRECT_URL:}}")
     private String facebookRedirectUri;
 
+    private void assertConfigured(String action) {
+        if (isBlank(facebookClientId) || isBlank(facebookClientSecret) || isBlank(facebookRedirectUri)) {
+            throw new ExternalApiCallException(
+                "Thiếu cấu hình Facebook. Cần FACEBOOK_CLIENT_ID, FACEBOOK_CLIENT_SECRET, FACEBOOK_REDIRECT_URI để " + action
+            );
+        }
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
     public String getAuthUrl(String stateJwt) {
+        assertConfigured("tạo link đăng nhập");
         return String.format(
             "https://www.facebook.com/v25.0/dialog/oauth" +
                 "?client_id=%s" +
@@ -66,6 +79,7 @@ public class FacebookClient {
     }
 
     public TokenResponse exchangeCodeForFacebookLongToken(String code) {
+        assertConfigured("trao đổi code lấy token");
         try {
             String shortTokenUrl = "https://graph.facebook.com/oauth/access_token" +
                 "?client_id=" + facebookClientId +
