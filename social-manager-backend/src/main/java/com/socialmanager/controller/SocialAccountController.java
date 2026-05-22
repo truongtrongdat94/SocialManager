@@ -200,11 +200,15 @@ public class SocialAccountController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Unauthenticated"));
         }
         String username = authentication.getName();
-        String publishedId = socialAccountService.publishFacebookPost(id, username, request.getCaption(), request.getMediaUrls());
-
-        return ResponseEntity.ok(
-            ApiResponse.ok(publishedId)
-        );
+        try {
+            String publishedId = socialAccountService.publishFacebookPost(id, username, request.getCaption(), request.getMediaUrls());
+            return ResponseEntity.ok(ApiResponse.ok(publishedId));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(ex.getMessage()));
+        } catch (Exception ex) {
+            String msg = ex.getMessage() != null ? ex.getMessage() : "Lỗi khi đăng bài";
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.error(msg));
+        }
     }
 
     @PostMapping("/{id}/facebook/schedule")
