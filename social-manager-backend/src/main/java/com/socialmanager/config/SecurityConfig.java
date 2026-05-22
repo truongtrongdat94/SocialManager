@@ -19,6 +19,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.socialmanager.security.CustomOAuth2UserService;
 import com.socialmanager.security.JwtAuthFilter;
+import com.socialmanager.security.JwtAuthenticationEntryPoint;
 import com.socialmanager.security.OAuth2AuthenticationSuccessHandler;
 
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,7 @@ public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2AuthenticationSuccessHandler oAuth2SuccessHandler;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -43,6 +45,7 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/api/auth/**",
                     "/api/social-accounts/**",   // cho phép connect FB/Tiktok
+                    "/api/test/**",               // test endpoints (remove in production)
                     "/oauth2/**",
                     "/login/**",
                     "/actuator/health",
@@ -52,6 +55,9 @@ public class SecurityConfig {
                 // Tất cả các API /api/ai/** bây giờ bắt buộc phải có Token mới gọi được
                 .requestMatchers("/api/ai/**").authenticated() 
                 .anyRequest().authenticated()
+            )
+            .exceptionHandling(exception -> exception
+                .authenticationEntryPoint(jwtAuthenticationEntryPoint)
             )
             .oauth2Login(oauth2 -> oauth2
                 .userInfoEndpoint(userInfo ->
