@@ -25,19 +25,23 @@ public class JwtUtil {
     }
 
     public String generateToken(String username) {
+        long now = System.currentTimeMillis();
         return Jwts.builder()
                 .subject(username)
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
+                .claim("type", "access")
+                .issuedAt(new Date(now))
+                .expiration(new Date(now + jwtExpirationMs))
                 .signWith(getSigningKey())
                 .compact();
     }
 
     public String generateRefreshToken(String username) {
+        long now = System.currentTimeMillis();
         return Jwts.builder()
                 .subject(username)
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + refreshExpirationMs))
+                .claim("type", "refresh")
+                .issuedAt(new Date(now))
+                .expiration(new Date(now + refreshExpirationMs))
                 .signWith(getSigningKey())
                 .compact();
     }

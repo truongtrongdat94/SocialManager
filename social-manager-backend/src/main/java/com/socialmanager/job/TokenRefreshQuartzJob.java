@@ -33,7 +33,7 @@ public class TokenRefreshQuartzJob extends QuartzJobBean {
             try {
                 socialAccountService.refreshAccessToken(account.getId());
             } catch (Exception e) {
-                System.out.println("error:" + e.getMessage());
+                // Token refresh failed - will retry on next scheduled run
             }
         }
     }

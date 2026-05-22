@@ -9,8 +9,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -40,11 +38,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             String token = header.substring(7);
             if (jwtUtil.validateToken(token)) {
                 String subject = jwtUtil.getUsernameFromToken(token);
-                UserDetails userDetails = loadUserBySubject(subject);
-                if (userDetails != null) {
+                com.socialmanager.model.User user = loadUserEntityBySubject(subject);
+                if (user != null) {
+                    // Set entity User trực tiếp vào principal để @AuthenticationPrincipal hoạt động
                     UsernamePasswordAuthenticationToken auth =
                             new UsernamePasswordAuthenticationToken(
-                                    userDetails, null, userDetails.getAuthorities());
+                                    user, null, Collections.emptyList());
                     auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(auth);
                 }
@@ -53,14 +52,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         chain.doFilter(request, response);
     }
 
-    private UserDetails loadUserBySubject(String subject) {
-        com.socialmanager.model.User user = userRepository.findByEmail(subject)
+    private com.socialmanager.model.User loadUserEntityBySubject(String subject) {
+        return userRepository.findByEmail(subject)
                 .or(() -> userRepository.findByUsername(subject))
                 .orElse(null);
-        if (user == null) return null;
-        return User.withUsername(subject)
-                .password(user.getPassword() != null ? user.getPassword() : "")
-                .authorities(Collections.emptyList())
-                .build();
     }
 }

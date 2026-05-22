@@ -15,4 +15,7 @@ public interface AutoPilotConfigRepository extends JpaRepository<AutoPilotConfig
             AutoPilotStatus status,
             LocalDateTime time
     );
+
+    // lấy config theo user ID
+    List<AutoPilotConfig> findByUserId(UUID userId);
 }
