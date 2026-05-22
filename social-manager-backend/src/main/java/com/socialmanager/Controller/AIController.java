@@ -78,22 +78,27 @@ public class AIController {
 }
 
     @PostMapping("/generate-image")
-    public ResponseEntity<?> generateImage(@RequestBody Map<String, String> request) {
+    public ResponseEntity<ApiResponse<Map<String, String>>> generateImage(@RequestBody Map<String, String> request) {
         String prompt = request.get("prompt");
         
-        // 1. Lấy User xịn từ Token
-        User currentUser = getCurrentAuthenticatedUser(); 
-    
-        // 2. Thay chữ 'null' bằng currentUser
-        ImageGeneration imgGen = imageGenService.startImageGeneration(prompt, currentUser);
-    
-        if (imgGen != null) {
-            return ResponseEntity.ok(Map.of(
-                "message", "Đã gửi yêu cầu, vui lòng đợi AI vẽ ảnh!", 
-                "generationId", imgGen.getLeonardoGenerationId()
+        try {
+            // 1. Lấy User xịn từ Token
+            User currentUser = getCurrentAuthenticatedUser(); 
+        
+            // 2. Thay chữ 'null' bằng currentUser
+            ImageGeneration imgGen = imageGenService.startImageGeneration(prompt, currentUser);
+        
+            return ResponseEntity.ok(new ApiResponse<>(
+                true,
+                "Đã gửi yêu cầu, vui lòng đợi AI vẽ ảnh!",
+                Map.of("generationId", imgGen.getLeonardoGenerationId())
             ));
-        } else {
-            return ResponseEntity.status(500).body(Map.of("error", "Có lỗi xảy ra khi gọi Leonardo"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new ApiResponse<>(
+                false,
+                e.getMessage(),
+                null
+            ));
         }
     }
 }

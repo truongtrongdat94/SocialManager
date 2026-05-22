@@ -94,7 +94,9 @@ public class AuthService {
         String username = jwtUtil.getUsernameFromToken(refreshToken);
         
         // Find user and verify refresh token
+        // username from JWT might be email (OAuth2) or username (local login)
         User user = userRepository.findByUsername(username)
+                .or(() -> userRepository.findByEmail(username))
                 .orElseThrow(() -> new BadCredentialsException("User not found"));
         
         if (user.getRefreshToken() == null || !user.getRefreshToken().equals(refreshToken)) {

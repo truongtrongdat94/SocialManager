@@ -35,6 +35,11 @@ public class ImageGenService {
     public String generateImageRequest(String prompt) {
         log.info(">>>> ĐANG GỬI YÊU CẦU TẠO ẢNH SANG LEONARDO...");
 
+        if (apiKey == null || apiKey.isBlank() || apiKey.equals("your-leonardo-api-key-here")) {
+            log.error("❌ LEONARDO API KEY CHƯA ĐƯỢC CẤU HÌNH!");
+            throw new RuntimeException("Leonardo API key chưa được cấu hình. Vui lòng thêm app.leonardo.api-key vào .env");
+        }
+
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(apiKey);
@@ -47,24 +52,24 @@ public class ImageGenService {
         );
 
         try {
+            @SuppressWarnings("rawtypes")
             ResponseEntity<Map> response = restTemplate.postForEntity(apiUrl, new HttpEntity<>(requestBody, headers), Map.class);
-            Map sdGenerationJob = (Map) response.getBody().get("sdGenerationJob");
+            @SuppressWarnings("unchecked")
+            Map<String, Object> sdGenerationJob = (Map<String, Object>) response.getBody().get("sdGenerationJob");
             String generationId = (String) sdGenerationJob.get("generationId");
             
             log.info("✅ THÀNH CÔNG! GenerationId: {}", generationId);
             return generationId;
         } catch (Exception e) {
-            log.error("❌ LỖI GỌI LEONARDO: {}", e.getMessage());
-            return null;
+            log.error("❌ LỖI GỌI LEONARDO: {}", e.getMessage(), e);
+            throw new RuntimeException("Lỗi khi gọi Leonardo API: " + e.getMessage(), e);
         }
     }
 
     //Hàm lưu yêu cầu vào Database
     public ImageGeneration startImageGeneration(String prompt, User user) {
-        // Gọi hàm số 1 để lấy ID từ Leonardo
+        // Gọi hàm số 1 để lấy ID từ Leonardo (throws exception if fails)
         String genId = generateImageRequest(prompt);
-        
-        if (genId == null) return null;
 
         // Tạo Entity và lưu vào DB với trạng thái PENDING
         ImageGeneration imgGen = new ImageGeneration();
@@ -86,14 +91,18 @@ public class ImageGenService {
 
         try {
             String checkUrl = apiUrl + "/" + generationId;
+            @SuppressWarnings("rawtypes")
             ResponseEntity<Map> response = restTemplate.exchange(checkUrl, org.springframework.http.HttpMethod.GET, entity, Map.class);
-            Map body = response.getBody();
+            @SuppressWarnings("unchecked")
+            Map<String, Object> body = response.getBody();
 
-            Map generationsByPk = (Map) body.get("generations_by_pk");
+            @SuppressWarnings("unchecked")
+            Map<String, Object> generationsByPk = (Map<String, Object>) body.get("generations_by_pk");
             String status = (String) generationsByPk.get("status");
             
             if ("COMPLETE".equals(status)) {
-                java.util.List<Map> images = (java.util.List<Map>) generationsByPk.get("generated_images");
+                @SuppressWarnings("unchecked")
+                java.util.List<Map<String, Object>> images = (java.util.List<Map<String, Object>>) generationsByPk.get("generated_images");
                 if (images != null && !images.isEmpty()) {
                     return (String) images.get(0).get("url");
                 }
