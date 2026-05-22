@@ -1,19 +1,11 @@
-import { useMemo, useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router";
 import toast from "react-hot-toast";
-import { api } from "../../lib/api";
+import { api, type ApiResponse, type SocialAccountDto, getApiErrorMessage } from "@/lib/api";
 
 type IncomingAiState = {
 	caption?: string;
 	imageUrl?: string;
-};
-
-type SocialAccount = {
-	id: string;
-	platform: string;
-	externalAccountId: string;
-	accountName: string;
-	profilePictureUrl: string;
 };
 
 export function Post() {
@@ -22,78 +14,51 @@ export function Post() {
 
 	const [caption, setCaption] = useState(incoming?.caption ?? "");
 	const [imageUrl, setImageUrl] = useState(incoming?.imageUrl ?? "");
+	const [extraImageUrls, setExtraImageUrls] = useState<string[]>([]);
+	const [linkInput, setLinkInput] = useState("");
+	const [uploading, setUploading] = useState(false);
+	const [uploadBytes, setUploadBytes] = useState<number | null>(null);
+	const [uploadFileName, setUploadFileName] = useState<string | null>(null);
+	const [uploadFailed, setUploadFailed] = useState(false);
+    const [uploadErrorMessage, setUploadErrorMessage] = useState<string | null>(null);
+    const UPLOAD_MAX_MB = 10;
 	const [postMode, setPostMode] = useState<"now" | "schedule">("now");
 	const [scheduledAt, setScheduledAt] = useState("");
-	const [isPosting, setIsPosting] = useState(false);
-	
-	// Danh sách tài khoản và tài khoản được chọn
-	const [accounts, setAccounts] = useState<SocialAccount[]>([]);
-	const [selectedPageId, setSelectedPageId] = useState<string>("");
-	
-	// Danh sách bài đã lên lịch
-	const [scheduledPosts, setScheduledPosts] = useState<any[]>([]);
-	const [showScheduled, setShowScheduled] = useState(false);
 
-	const canPublish = useMemo(() => {
-		return caption.trim().length > 0 && selectedPageId.length > 0;
-	}, [caption, selectedPageId]);
+	const canPublish = useMemo(() => caption.trim().length > 0, [caption]);
+	const mediaUrls = useMemo(() => [imageUrl, ...extraImageUrls].filter((u) => !!u), [imageUrl, extraImageUrls]);
 
-	// Load scheduled posts khi chọn page
-	const loadScheduledPosts = async (pageId: string) => {
-		if (!pageId) return;
-		
-		try {
-			const response = await api.get(`/api/posts/${pageId}/scheduled`);
-			const posts = response.data.data || [];
-			console.log('📅 Scheduled posts response:', posts);
-			setScheduledPosts(posts);
-		} catch (error) {
-			console.error("Lỗi khi load bài đã lên lịch:", error);
-		}
-	};
+	const [accounts, setAccounts] = useState<SocialAccountDto[]>([]);
+	const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+	const [publishing, setPublishing] = useState(false);
 
-	// Load danh sách tài khoản Facebook
 	useEffect(() => {
-		let isMounted = true;
-
 		const fetchAccounts = async () => {
 			try {
-				const response = await api.get("/api/social-accounts");
-				
-				if (!isMounted) return;
-				
-				// API returns ApiResponse<List<SocialAccountDto>> format: { data: [...], success: true, message: "..." }
-				const allAccounts = response.data.data || response.data;
-				
-				const facebookAccounts = allAccounts.filter(
-					(acc: SocialAccount) => acc.platform === "FACEBOOK"
-				);
-				
-				setAccounts(facebookAccounts);
-				
-				// Auto-select first account
-				if (facebookAccounts.length > 0 && facebookAccounts[0].externalAccountId) {
-					setSelectedPageId(facebookAccounts[0].externalAccountId);
-					loadScheduledPosts(facebookAccounts[0].externalAccountId);
-				}
-			} catch (error: any) {
-				if (!isMounted) return;
-				
-				console.error("Lỗi khi load tài khoản:", error);
-				toast.error("Không thể tải danh sách tài khoản Facebook");
+				const res = await api.get<ApiResponse<SocialAccountDto[]>>("/api/social-accounts");
+				setAccounts(res.data.data ?? []);
+				const fb = (res.data.data ?? []).find((a) => a.platform === "FACEBOOK");
+				if (fb) setSelectedAccountId(fb.id);
+			} catch (err) {
+				// silent - user may not have accounts yet
 			}
 		};
-
-		fetchAccounts();
-		
-		return () => {
-			isMounted = false;
-		};
+		void fetchAccounts();
 	}, []);
 
-	const handlePublish = async () => {
+	const handlePublish = () => {
+		// Prevent publishing when upload is in progress or previously failed
+		if (uploading) {
+			toast.error("Đang upload ảnh, vui lòng đợi hoặc huỷ upload trước khi đăng.");
+			return;
+		}
+
+		if (uploadFailed) {
+			toast.error("Upload ảnh thất bại. Vui lòng thử lại hoặc bỏ ảnh trước khi đăng.");
+			return;
+		}
 		if (!canPublish) {
-			toast.error("Vui lòng nhập caption và chọn tài khoản trước khi đăng.");
+			toast.error("Vui lòng nhập caption trước khi đăng.");
 			return;
 		}
 
@@ -102,52 +67,73 @@ export function Post() {
 			return;
 		}
 
-		setIsPosting(true);
-
-		try {
-			// Convert datetime-local to Unix timestamp (seconds)
-			const scheduledTimestamp = postMode === "schedule" 
-				? Math.floor(new Date(scheduledAt).getTime() / 1000) 
-				: null;
-
-			if (imageUrl && imageUrl.trim().length > 0) {
-				// Đăng ảnh
-				await api.post(`/api/posts/${selectedPageId}/photo`, {
-					photoUrl: imageUrl,
-					caption: caption,
-					scheduledPublishTime: scheduledTimestamp
-				});
-			} else {
-				// Đăng text
-				await api.post(`/api/posts/${selectedPageId}`, {
-					message: caption,
-					scheduledPublishTime: scheduledTimestamp
-				});
-			}
-
-			toast.success(
-				postMode === "now"
-					? "Đã đăng bài thành công!"
-					: `Đã lên lịch đăng lúc ${new Date(scheduledAt).toLocaleString("vi-VN")}`
-			);
-
-			// Reset form
-			setCaption("");
-			setImageUrl("");
-			setScheduledAt("");
-			setPostMode("now");
-			
-			// Reload scheduled posts
-			if (postMode === "schedule") {
-				loadScheduledPosts(selectedPageId);
-			}
-		} catch (error: any) {
-			console.error("Lỗi khi đăng bài:", error);
-			const errorMessage = error.response?.data?.message || error.message || "Có lỗi xảy ra";
-			toast.error("Lỗi khi đăng bài: " + errorMessage);
-		} finally {
-			setIsPosting(false);
+		if (!selectedAccountId) {
+			toast.error("Vui lòng chọn tài khoản Facebook để đăng.");
+			return;
 		}
+
+		setPublishing(true);
+		void (async () => {
+			try {
+				const body = { caption, mediaUrls };
+				if (postMode === "schedule") {
+					const scheduledBody = { ...body, scheduledTime: scheduledAt };
+					await api.post<ApiResponse<string>>(`/api/social-accounts/${selectedAccountId}/facebook/schedule`, scheduledBody);
+					toast.success("Đã lên lịch bài đăng.");
+				} else {
+					await api.post<ApiResponse<string>>(`/api/social-accounts/${selectedAccountId}/facebook/publish`, body);
+					toast.success("Đăng lên Facebook thành công.");
+				}
+			} catch (err) {
+				toast.error(getApiErrorMessage(err));
+			} finally {
+				setPublishing(false);
+			}
+		})();
+	};
+
+	const removeMediaAt = (index: number) => {
+		if (index < 0 || index >= mediaUrls.length) return;
+		if (index === 0) {
+			const rest = [...extraImageUrls];
+			const nextPrimary = rest.shift() ?? "";
+			setImageUrl(nextPrimary);
+			setExtraImageUrls(rest);
+			return;
+		}
+		const target = mediaUrls[index];
+		setExtraImageUrls((prev) => prev.filter((u) => u !== target));
+	};
+
+	const handleAddLinks = () => {
+		const rawLinks = linkInput
+			.split(/\r?\n|,/)
+			.map((s) => s.trim())
+			.filter(Boolean);
+
+		if (rawLinks.length === 0) {
+			toast.error("Vui lòng nhập ít nhất 1 link ảnh.");
+			return;
+		}
+
+		const merged = [...mediaUrls];
+		for (const link of rawLinks) {
+			if (!/^https?:\/\//i.test(link)) {
+				continue;
+			}
+			if (!merged.includes(link)) {
+				merged.push(link);
+			}
+		}
+
+		const added = merged.length - mediaUrls.length;
+		const [nextPrimary, ...rest] = merged;
+		setImageUrl(nextPrimary ?? "");
+		setExtraImageUrls(rest);
+
+		setLinkInput("");
+		if (added > 0) toast.success(`Đã thêm ${added} link ảnh.`);
+		else toast.error("Không có link hợp lệ để thêm.");
 	};
 
 	return (
@@ -158,7 +144,7 @@ export function Post() {
 			<div className="mb-8 rounded-[24px] border border-sky-100/80 bg-white/75 px-5 py-5 backdrop-blur-sm">
 				<h1 className="text-3xl font-bold tracking-tight text-sky-800">Đăng bài</h1>
 				<p className="mt-2 text-base text-sky-700/80">
-					Đăng bài lên Facebook Page với khả năng lên lịch tự động.
+					Trang này nhận dữ liệu từ AI Dashboard qua router state: caption + imageUrl.
 				</p>
 			</div>
 
@@ -167,30 +153,22 @@ export function Post() {
 					<h2 className="mb-5 text-xl font-bold text-sky-800">Nội dung</h2>
 
 					<div className="space-y-4">
+						{/** Account selector for Facebook publishing */}
 						<div>
-							<label className="mb-2 block text-sm font-semibold text-sky-700">Chọn Facebook Page</label>
+							<label className="mb-2 block text-sm font-semibold text-sky-700">Chọn tài khoản Facebook</label>
 							<select
-								value={selectedPageId}
-								onChange={(e) => {
-									setSelectedPageId(e.target.value);
-									loadScheduledPosts(e.target.value);
-								}}
-								className="h-11 w-full rounded-xl border border-sky-200 bg-[#f7fcff] px-4 text-sm text-sky-900 outline-none transition focus:border-sky-400 focus:shadow-[0_0_0_4px_rgba(56,189,248,0.18)]"
+								value={selectedAccountId ?? ""}
+								onChange={(e) => setSelectedAccountId(e.target.value || null)}
+								className="h-11 w-full rounded-xl border border-sky-200 bg-[#f7fcff] px-4 text-sm text-sky-900 outline-none transition focus:border-sky-400"
 							>
-								<option value="">-- Chọn Page --</option>
-								{accounts.map((acc) => (
-									<option key={acc.id} value={acc.externalAccountId}>
-										{acc.accountName} {acc.externalAccountId ? `(${acc.externalAccountId})` : '(No Page ID)'}
-									</option>
-								))}
+								<option value="">-- Chọn tài khoản --</option>
+								{accounts
+									.filter((a) => a.platform === "FACEBOOK")
+									.map((a) => (
+										<option key={a.id} value={a.id}>{a.accountName} ({a.accountId})</option>
+									))}
 							</select>
-							{accounts.length > 0 && !accounts[0].externalAccountId && (
-								<p className="mt-2 text-sm text-red-600">
-									⚠️ Tài khoản không có Page ID. Vui lòng xóa và kết nối lại.
-								</p>
-							)}
-						</div>
-
+							</div>
 						<div>
 							<label className="mb-2 block text-sm font-semibold text-sky-700">Caption</label>
 							<textarea
@@ -203,13 +181,137 @@ export function Post() {
 						</div>
 
 						<div>
-							<label className="mb-2 block text-sm font-semibold text-sky-700">Image URL (tùy chọn)</label>
-							<input
-								value={imageUrl}
-								onChange={(e) => setImageUrl(e.target.value)}
-								className="h-11 w-full rounded-xl border border-sky-200 bg-[#f7fcff] px-4 text-sm text-sky-900 outline-none transition focus:border-sky-400 focus:shadow-[0_0_0_4px_rgba(56,189,248,0.18)]"
+							<label className="mb-2 block text-sm font-semibold text-sky-700">Image URL (nhiều link: xuống dòng hoặc dấu phẩy)</label>
+							<textarea
+								rows={3}
+								value={linkInput}
+								onChange={(e) => setLinkInput(e.target.value)}
+								className="w-full rounded-2xl border border-sky-200 bg-[#f7fcff] px-4 py-3 text-[15px] text-sky-900 outline-none transition focus:border-sky-400 focus:shadow-[0_0_0_4px_rgba(56,189,248,0.18)]"
 								placeholder="https://..."
 							/>
+							<div className="mt-2">
+								<button
+									type="button"
+									onClick={handleAddLinks}
+									className="h-10 rounded-full border border-sky-200 bg-white px-4 text-sm font-semibold text-sky-700 transition hover:bg-sky-50"
+								>
+									Thêm link ảnh
+								</button>
+							</div>
+							<div className="mt-2 flex items-center gap-3">
+								<label className="inline-flex items-center gap-3">
+									<input
+										type="file"
+										accept="image/*"
+										multiple
+										className="hidden"
+										onChange={async (e) => {
+											const files = Array.from(e.target.files ?? []);
+											if (files.length === 0) return;
+
+											setUploadFailed(false);
+											setUploadErrorMessage(null);
+											setUploading(true);
+											let primaryUrl = imageUrl;
+											const additionalUrls = [...extraImageUrls];
+
+											for (const f of files) {
+												const maxMB = UPLOAD_MAX_MB;
+												setUploadBytes(f.size);
+												setUploadFileName(f.name);
+
+												if (f.size > maxMB * 1024 * 1024) {
+													setUploadFailed(true);
+													setUploadErrorMessage(`File ${f.name} vượt quá giới hạn ${maxMB} MB`);
+													toast.error(`File ${f.name} vượt quá ${maxMB} MB`);
+													continue;
+												}
+
+												const fd = new FormData();
+												fd.append("file", f);
+
+												try {
+													const token = localStorage.getItem("token");
+													const res = await fetch(`${import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080"}/api/cloudinary/upload`, {
+														method: "POST",
+														headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+														body: fd,
+													});
+													const apiResp = await res.json();
+
+													if (res.ok && apiResp && apiResp.success && apiResp.data) {
+														const data = apiResp.data;
+														if (!primaryUrl) {
+															primaryUrl = data.url;
+														} else {
+															additionalUrls.push(data.url);
+														}
+														setUploadBytes(data.bytes ?? null);
+														setUploadFailed(false);
+														setUploadErrorMessage(null);
+													} else {
+														setUploadFailed(true);
+														const msg = (apiResp && apiResp.message) ? apiResp.message : `Upload thất bại: ${f.name}`;
+														setUploadErrorMessage(msg);
+														toast.error(msg);
+													}
+												} catch (err) {
+													const msg = err instanceof Error ? err.message : `Upload thất bại: ${f.name}`;
+													setUploadFailed(true);
+													setUploadErrorMessage(msg);
+													toast.error(msg);
+												}
+											}
+											setImageUrl(primaryUrl);
+											setExtraImageUrls(additionalUrls);
+
+											setUploading(false);
+											if (files.length > 1) {
+												toast.success(`Đã xử lý ${files.length} file`);
+											}
+										}}
+									/>
+									<span className="h-10 inline-flex items-center rounded-full border border-sky-200 bg-white px-4 text-sm font-semibold text-sky-700 hover:bg-sky-50">Chọn tệp ảnh</span>
+								</label>
+
+								<div className="text-sm text-sky-600">
+									{uploading ? (
+										"Đang upload..."
+									) : uploadFailed ? (
+										<div>
+											{uploadBytes ? <div>{`Kích thước: ${(uploadBytes / 1024 / 1024).toFixed(2)} MB`}{uploadBytes > UPLOAD_MAX_MB * 1024 * 1024 ? " (vượt quá giới hạn)" : ""}</div> : null}
+											{uploadErrorMessage ? <div className="text-rose-600">{uploadErrorMessage}</div> : <div>Upload thất bại</div>}
+										</div>
+									) : uploadFileName ? (
+										<div>{uploadFileName}{uploadBytes ? <span>{` • ${(uploadBytes / 1024 / 1024).toFixed(2)} MB`}</span> : null}</div>
+									) : (
+										<div>{`Giới hạn upload: ${UPLOAD_MAX_MB} MB`}</div>
+									)
+									}
+								</div>
+							</div>
+
+							{mediaUrls.length > 0 && (
+								<div className="mt-3 rounded-xl border border-sky-200 bg-white p-3">
+									<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-sky-600">Media đã thêm ({mediaUrls.length})</p>
+									<div className="space-y-2">
+										{mediaUrls.map((url, idx) => (
+											<div key={`${url}-${idx}`} className="flex items-center justify-between gap-3 rounded-lg border border-sky-100 bg-sky-50/60 px-3 py-2">
+												<a href={url} target="_blank" rel="noreferrer" className="truncate text-xs font-medium text-sky-700 underline-offset-2 hover:underline">
+													{url}
+												</a>
+												<button
+													type="button"
+													onClick={() => removeMediaAt(idx)}
+													className="rounded-full border border-rose-200 bg-white px-3 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50"
+												>
+													Xóa
+												</button>
+											</div>
+										))}
+									</div>
+								</div>
+							)}
 						</div>
 					</div>
 				</section>
@@ -218,35 +320,11 @@ export function Post() {
 					<h2 className="mb-5 text-xl font-bold text-sky-800">Preview & Publish</h2>
 
 					<div className="space-y-4">
-						{/* Facebook-style Preview */}
-						<div className="overflow-hidden rounded-2xl border border-sky-200 bg-white">
-							{/* Page Header */}
-							<div className="flex items-center gap-3 border-b border-gray-200 p-4">
-								<div className="h-10 w-10 rounded-full bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center text-white font-bold">
-									{accounts.find(acc => acc.externalAccountId === selectedPageId)?.accountName?.charAt(0) || 'P'}
-								</div>
-								<div>
-									<div className="font-semibold text-gray-900 text-sm">
-										{accounts.find(acc => acc.externalAccountId === selectedPageId)?.accountName || 'Chọn Page'}
-									</div>
-									<div className="text-xs text-gray-500">Vừa xong · 🌍</div>
-								</div>
-							</div>
-							
-							{/* Caption */}
-							{caption && (
-								<div className="px-4 py-3 text-sm text-gray-800 whitespace-pre-wrap">
-									{caption}
-								</div>
-							)}
-							
-							{/* Image */}
+						<div className="overflow-hidden rounded-[28px] border border-sky-200 bg-gradient-to-br from-[#f6fcff] to-[#e9f7ff]">
 							{imageUrl ? (
-								<img src={imageUrl} alt="Post preview" className="w-full max-h-[400px] object-cover" />
+								<img src={imageUrl} alt="Post media preview" className="h-[320px] w-full object-cover" />
 							) : (
-								<div className="flex h-[200px] items-center justify-center bg-gray-50 text-sm text-gray-400">
-									{caption ? 'Bài viết text' : 'Chưa có nội dung'}
-								</div>
+								<div className="flex h-[320px] items-center justify-center text-sm text-sky-600">Chưa có ảnh preview</div>
 							)}
 						</div>
 
@@ -292,65 +370,11 @@ export function Post() {
 						<button
 							type="button"
 							onClick={handlePublish}
-							disabled={!canPublish || isPosting}
+							disabled={!canPublish || publishing}
 							className="h-12 w-full rounded-full bg-sky-600 px-5 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-60"
 						>
-							{isPosting ? "Đang đăng..." : "Xác nhận đăng bài"}
+							{publishing ? "Đang đăng..." : postMode === "schedule" ? "Xác nhận đăng lịch" : "Xác nhận đăng bài"}
 						</button>
-						
-						{/* Scheduled Posts Section */}
-						{scheduledPosts.length > 0 && (
-							<div className="mt-6 rounded-2xl border border-sky-200 bg-sky-50/50 p-4">
-								<button
-									type="button"
-									onClick={() => setShowScheduled(!showScheduled)}
-									className="flex w-full items-center justify-between text-sm font-semibold text-sky-700 hover:text-sky-800"
-								>
-									<span>📅 Bài đã lên lịch ({scheduledPosts.length})</span>
-									<span className="text-lg">{showScheduled ? '▼' : '▶'}</span>
-								</button>
-								
-								{showScheduled && (
-									<div className="mt-4 space-y-3 max-h-96 overflow-y-auto">
-										{scheduledPosts.map((post: any) => (
-											<div key={post.id} className="rounded-xl border border-sky-200 bg-white p-4 shadow-sm">
-												{/* Scheduled Time */}
-												<div className="mb-3 flex items-center gap-2 text-sm font-semibold text-sky-700">
-													<span>🕐</span>
-													<span>
-														{post.scheduled_publish_time 
-															? new Date(post.scheduled_publish_time * 1000).toLocaleString("vi-VN", {
-																	year: 'numeric',
-																	month: '2-digit',
-																	day: '2-digit',
-																	hour: '2-digit',
-																	minute: '2-digit'
-															  })
-															: "Chưa có thời gian"}
-													</span>
-												</div>
-												
-												{/* Caption */}
-												{post.message && (
-													<p className="text-sm text-gray-800 mb-3 line-clamp-3 whitespace-pre-wrap">
-														{post.message}
-													</p>
-												)}
-												
-												{/* Image if exists */}
-												{post.full_picture && (
-													<img 
-														src={post.full_picture} 
-														alt="Scheduled post" 
-														className="w-full h-40 object-cover rounded-lg"
-													/>
-												)}
-											</div>
-										))}
-									</div>
-								)}
-							</div>
-						)}
 					</div>
 				</section>
 			</div>

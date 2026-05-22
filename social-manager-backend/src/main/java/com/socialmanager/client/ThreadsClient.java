@@ -22,13 +22,13 @@ import java.nio.charset.StandardCharsets;
 public class ThreadsClient {
     private final RestTemplate restTemplate = new RestTemplate();
 
-    @Value("${THREADS_CLIENT_ID}")
+    @Value("${THREADS_CLIENT_ID:}")
     private String threadsClientId;
 
-    @Value("${THREADS_CLIENT_SECRET}")
+    @Value("${THREADS_CLIENT_SECRET:}")
     private String threadsClientSecret;
 
-    @Value("${THREADS_REDIRECT_URI}")
+    @Value("${THREADS_REDIRECT_URI:}")
     private String threadsRedirectUri;
 
     public String getAuthUrl(String stateJwt) {

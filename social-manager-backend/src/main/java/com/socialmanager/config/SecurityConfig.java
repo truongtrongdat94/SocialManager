@@ -44,8 +44,9 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     "/api/auth/**",
-                    "/api/social-accounts/**",   // cho phép connect FB/Tiktok
-                    "/api/test/**",               // test endpoints (remove in production)
+                    "/api/social-accounts/**",
+                    "/api/public-config/**",
+                    "/api/test/**",
                     "/oauth2/**",
                     "/login/**",
                     "/actuator/health",

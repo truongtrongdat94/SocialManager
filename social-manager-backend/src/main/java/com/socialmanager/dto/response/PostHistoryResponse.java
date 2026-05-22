@@ -22,10 +22,17 @@ public record PostHistoryResponse(
     LocalDateTime createdAt
 ) {
     public static PostHistoryResponse from(PostHistory history) {
+        UUID socialAccountId = history.getSocialAccount() != null
+            ? history.getSocialAccount().getId()
+            : history.getSocialAccountIdSnapshot();
+        String socialAccountName = history.getSocialAccount() != null
+            ? history.getSocialAccount().getAccountName()
+            : history.getSocialAccountNameSnapshot();
+
         return new PostHistoryResponse(
             history.getId(),
-            history.getSocialAccount().getId(),
-            history.getSocialAccount().getAccountName(),
+            socialAccountId,
+            socialAccountName,
             history.getPlatform(),
             history.getExternalPostId(),
             history.getContent(),

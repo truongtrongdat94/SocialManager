@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-    @Value("${FRONTEND_URL}")
+    @Value("${FRONTEND_URL:http://localhost:3000}")
     private String frontendUrl;
 
     @ExceptionHandler(ResourceNotFoundException.class)
@@ -94,6 +94,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleExternalApiError(ExternalApiCallException ex) {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
             .body(ApiResponse.error("Lỗi khi giao tiếp với bên thứ 3: " + ex.getMessage()));
+    }
+
+    @ExceptionHandler(FacebookTokenReconnectException.class)
+    public ResponseEntity<ApiResponse<Void>> handleFacebookTokenReconnect(FacebookTokenReconnectException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            .body(ApiResponse.error(ex.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)

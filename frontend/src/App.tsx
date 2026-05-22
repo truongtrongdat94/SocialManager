@@ -5,6 +5,7 @@ import { Register } from "@/pages/register/Register";
 import { OAuthCallback } from "@/pages/auth/OAuthCallback";
 import AiMediaDashboard from "@/pages/AiMediaDashboard";
 import { Post } from "@/pages/post/Post";
+import { PostHistory } from "@/pages/post-history/PostHistory";
 import { Accounts } from "@/pages/accounts/Accounts";
 import { Stats } from "@/pages/stats/Stats";
 import { AutoPilot } from "@/pages/autopilot/AutoPilot";
@@ -22,6 +23,7 @@ function DashboardLayout() {
 	const navItems = [
 		{ to: "/dashboard/ai", label: "AI Media" },
 		{ to: "/dashboard/post", label: "Đăng bài" },
+		{ to: "/dashboard/post-history", label: "Lịch sử bài đăng" },
 		{ to: "/dashboard/accounts", label: "Tài khoản" },
 		{ to: "/dashboard/stats", label: "Thống kê" },
 		{ to: "/dashboard/autopilot", label: "🤖 Auto Pilot" },
@@ -88,6 +90,7 @@ const router = createBrowserRouter([
 				children: [
 					{ path: "ai", element: <AiMediaDashboard /> },
 					{ path: "post", element: <Post /> },
+					{ path: "post-history", element: <PostHistory /> },
 					{ path: "accounts", element: <Accounts /> },
 					{ path: "stats", element: <Stats /> },
 					{ path: "autopilot", element: <AutoPilot /> },

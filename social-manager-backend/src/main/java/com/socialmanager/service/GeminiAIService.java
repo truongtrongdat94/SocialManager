@@ -29,10 +29,10 @@ import com.socialmanager.repository.AiGenerationLogRepository;
 @Transactional 
 public class GeminiAIService {
 
-    @Value("${app.gemini.api-key}")
+    @Value("${app.gemini.api-key:}")
     private String apiKey;
 
-    @Value("${app.gemini.url}")
+    @Value("${app.gemini.url:}")
     private String apiUrl;
 
     private final ImageGenerationRepository repository;

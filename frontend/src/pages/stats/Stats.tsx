@@ -34,8 +34,19 @@ export function Stats() {
 		period: 'day'
 	});
 
-	// Biểu đồ 2: Tăng trưởng Fans - BỎ (quá nhiều metrics deprecated)
-	// Chỉ còn page_daily_follows_unique không đủ để vẽ biểu đồ ý nghĩa
+	// Biểu đồ 2: Tăng trưởng Fans
+	const fansGrowthData = usePageInsights({
+		pageId: selectedPageId,
+		metrics: [
+			'page_fans',
+			'page_fan_adds_unique',
+			'page_fan_removes_unique',
+			'page_daily_follows_unique'
+		],
+		since: dateRange.since,
+		until: dateRange.until,
+		period: 'day'
+	});
 
 	// Biểu đồ 3: Engagement (chỉ còn 1 metric)
 	const engagementData = usePageInsights({
@@ -72,6 +83,11 @@ export function Stats() {
 		if (!engagementData.data) return [];
 		return transformInsightsToChartData(engagementData.data);
 	}, [engagementData.data]);
+
+	const fansGrowthChartData = useMemo(() => {
+		if (!fansGrowthData.data) return [];
+		return transformInsightsToChartData(fansGrowthData.data);
+	}, [fansGrowthData.data]);
 
 	const reactionsChartData = useMemo(() => {
 		if (!reactionsData.data) return [];
@@ -229,8 +245,8 @@ export function Stats() {
 		};
 	}, [selectedPageId]);
 
-	const loading = impressionsData.loading || engagementData.loading || reactionsData.loading;
-	const hasError = impressionsData.error || engagementData.error || reactionsData.error;
+	const loading = impressionsData.loading || fansGrowthData.loading || engagementData.loading || reactionsData.loading;
+	const hasError = impressionsData.error || fansGrowthData.error || engagementData.error || reactionsData.error;
 
 	return (
 		<div className="relative w-full overflow-hidden rounded-[30px] border border-sky-100 bg-gradient-to-br from-[#f2fbff] via-[#ecf8ff] to-[#def4ff] p-5 shadow-[0_12px_30px_rgba(56,146,183,0.15)] lg:p-7">
@@ -311,9 +327,19 @@ export function Stats() {
 						)}
 					</div>
 
+					{/* Biểu đồ 2: Tăng trưởng Fans */}
+					<div className="rounded-[28px] border border-sky-100 bg-white/90 p-6 shadow-[0_8px_24px_rgba(64,164,202,0.14)]">
+						<h2 className="mb-4 text-xl font-bold text-sky-800">2. Tăng trưởng Fans</h2>
+						{fansGrowthChartData.length > 0 ? (
+							<FansGrowthChart data={fansGrowthChartData} />
+						) : (
+							<p className="text-sm text-sky-600">Chưa có dữ liệu</p>
+						)}
+					</div>
+
 					{/* Biểu đồ 3: Engagement */}
 					<div className="rounded-[28px] border border-sky-100 bg-white/90 p-6 shadow-[0_8px_24px_rgba(64,164,202,0.14)]">
-						<h2 className="mb-4 text-xl font-bold text-sky-800">2. Engagement tổng hợp</h2>
+						<h2 className="mb-4 text-xl font-bold text-sky-800">3. Engagement tổng hợp</h2>
 						<p className="mb-3 text-sm text-sky-600">⚠️ Metric page_consumptions_unique đã deprecated</p>
 						{engagementChartData.length > 0 ? (
 							<EngagementChart data={engagementChartData} />
@@ -324,7 +350,7 @@ export function Stats() {
 
 					{/* Biểu đồ 4: Reactions */}
 					<div className="rounded-[28px] border border-sky-100 bg-white/90 p-6 shadow-[0_8px_24px_rgba(64,164,202,0.14)]">
-						<h2 className="mb-4 text-xl font-bold text-sky-800">3. Phân tích Reactions</h2>
+						<h2 className="mb-4 text-xl font-bold text-sky-800">4. Phân tích Reactions</h2>
 						{reactionsChartData.length > 0 ? (
 							<ReactionsChart data={reactionsChartData} />
 						) : (
@@ -334,7 +360,7 @@ export function Stats() {
 
 					{/* Biểu đồ 5: Hiệu suất bài viết */}
 					<div className="rounded-[28px] border border-sky-100 bg-white/90 p-6 shadow-[0_8px_24px_rgba(64,164,202,0.14)]">
-						<h2 className="mb-4 text-xl font-bold text-sky-800">4. Hiệu suất từng bài viết</h2>
+						<h2 className="mb-4 text-xl font-bold text-sky-800">5. Hiệu suất từng bài viết</h2>
 						{loadingPosts ? (
 							<p className="text-sm text-sky-600">Đang tải bài viết...</p>
 						) : posts.length > 0 ? (

@@ -23,13 +23,13 @@ import java.nio.charset.StandardCharsets;
 public class InstagramClient {
     private final RestTemplate restTemplate = new RestTemplate();
 
-    @Value("${INSTAGRAM_CLIENT_ID}")
+    @Value("${INSTAGRAM_CLIENT_ID:}")
     private String instagramClientId;
 
-    @Value("${INSTAGRAM_CLIENT_SECRET}")
+    @Value("${INSTAGRAM_CLIENT_SECRET:}")
     private String instagramClientSecret;
 
-    @Value("${INSTAGRAM_REDIRECT_URI}")
+    @Value("${INSTAGRAM_REDIRECT_URI:}")
     private String instagramRedirectUri;
 
     public String getAuthUrl(String stateJwt) {

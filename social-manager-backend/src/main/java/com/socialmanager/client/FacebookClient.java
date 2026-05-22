@@ -8,40 +8,75 @@ import com.socialmanager.exception.ExternalApiCallException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
 public class FacebookClient {
     private final RestTemplate restTemplate;
+    private final com.socialmanager.service.ConfigService configService;
 
-    @Value("${FACEBOOK_CLIENT_ID}")
+    @Value("${FACEBOOK_CLIENT_ID:${META_APP_ID:}}")
     private String facebookClientId;
 
-    @Value("${FACEBOOK_CLIENT_SECRET}")
+    @Value("${FACEBOOK_CLIENT_SECRET:${META_APP_SECRET:}}")
     private String facebookClientSecret;
 
-    @Value("${FACEBOOK_REDIRECT_URI}")
+    @Value("${FACEBOOK_REDIRECT_URI:${FACEBOOK_REDIRECT_URL:${META_REDIRECT_URI:}}}")
     private String facebookRedirectUri;
 
+    private void assertAuthUrlConfigured() {
+        String id = getEffectiveClientId();
+        String redirect = getEffectiveRedirectUri();
+        if (isBlank(id) || isBlank(redirect)) {
+            throw new ExternalApiCallException(
+                "Thiếu cấu hình Facebook. Cần FACEBOOK_CLIENT_ID và FACEBOOK_REDIRECT_URI để tạo link đăng nhập"
+            );
+        }
+    }
+
+    private void assertTokenExchangeConfigured() {
+        String id = getEffectiveClientId();
+        String secret = getEffectiveClientSecret();
+        String redirect = getEffectiveRedirectUri();
+        if (isBlank(id) || isBlank(secret) || isBlank(redirect)) {
+            throw new ExternalApiCallException(
+                "Thiếu cấu hình Facebook. Cần FACEBOOK_CLIENT_ID, FACEBOOK_CLIENT_SECRET, FACEBOOK_REDIRECT_URI để trao đổi token"
+            );
+        }
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
     public String getAuthUrl(String stateJwt) {
+        assertAuthUrlConfigured();
+        String id = getEffectiveClientId();
+        String redirect = getEffectiveRedirectUri();
         return String.format(
             "https://www.facebook.com/v25.0/dialog/oauth" +
                 "?client_id=%s" +
                 "&redirect_uri=%s" +
                 "&response_type=code" +
-                "&scope=pages_manage_metadata,pages_manage_posts,pages_read_engagement,pages_show_list" +
+                "&scope=pages_manage_posts,pages_read_engagement" +
                 "&state=%s",
-            facebookClientId,
-            URLEncoder.encode(facebookRedirectUri, StandardCharsets.UTF_8),
+            id,
+            URLEncoder.encode(redirect, StandardCharsets.UTF_8),
             stateJwt
         );
     }
@@ -52,19 +87,26 @@ public class FacebookClient {
         }
         String shortToken = shortRes.accessToken();
 
+        String id = getEffectiveClientId();
+        String secret = getEffectiveClientSecret();
         return "https://graph.facebook.com/v25.0/oauth/access_token" +
             "?grant_type=fb_exchange_token" +
-            "&client_id=" + facebookClientId +
-            "&client_secret=" + facebookClientSecret +
+            "&client_id=" + id +
+            "&client_secret=" + secret +
             "&fb_exchange_token=" + shortToken;
     }
 
     public TokenResponse exchangeCodeForFacebookLongToken(String code) {
+        assertTokenExchangeConfigured();
         try {
+            String id = getEffectiveClientId();
+            String secret = getEffectiveClientSecret();
+            String redirect = getEffectiveRedirectUri();
+
             String shortTokenUrl = "https://graph.facebook.com/oauth/access_token" +
-                "?client_id=" + facebookClientId +
-                "&client_secret=" + facebookClientSecret +
-                "&redirect_uri=" + facebookRedirectUri +
+                "?client_id=" + id +
+                "&client_secret=" + secret +
+                "&redirect_uri=" + redirect +
                 "&code=" + code;
 
             TokenResponse shortRes = restTemplate.getForObject(shortTokenUrl, TokenResponse.class);
@@ -90,6 +132,25 @@ public class FacebookClient {
         } catch (HttpClientErrorException e) {
             throw new ExternalApiCallException("Lỗi khi lấy danh sách Page: " + e.getResponseBodyAsString());
         }
+    }
+
+    // Helpers to read stored config via ConfigService falling back to env values
+    private String getEffectiveClientId() {
+        var fromStore = configService.getMetaAppId();
+        if (fromStore.isPresent() && !isBlank(fromStore.get())) return fromStore.get();
+        return facebookClientId;
+    }
+
+    private String getEffectiveRedirectUri() {
+        var fromStore = configService.getMetaRedirectUri();
+        if (fromStore.isPresent() && !isBlank(fromStore.get())) return fromStore.get();
+        return facebookRedirectUri;
+    }
+
+    private String getEffectiveClientSecret() {
+        var fromStore = configService.getMetaAppSecretDecrypted();
+        if (fromStore.isPresent() && !isBlank(fromStore.get())) return fromStore.get();
+        return facebookClientSecret;
     }
 
     // ==================== POSTING METHODS ====================
@@ -358,6 +419,53 @@ public class FacebookClient {
         } catch (HttpClientErrorException e) {
             throw new ExternalApiCallException("Lỗi khi lấy Post insights: " + e.getResponseBodyAsString());
         }
+    }
+
+    private FacebookGraphIdResponse postForm(String url, MultiValueMap<String, String> formData) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(formData, headers);
+
+        try {
+            return restTemplate.postForObject(url, entity, FacebookGraphIdResponse.class);
+        } catch (HttpClientErrorException e) {
+            throw new ExternalApiCallException("Lỗi khi đăng bài Facebook: " + e.getResponseBodyAsString());
+        }
+    }
+
+    public FacebookGraphIdResponse publishTextPost(String pageId, String pageAccessToken, String message) {
+        String url = "https://graph.facebook.com/v25.0/" + pageId + "/feed";
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("message", message);
+        form.add("access_token", pageAccessToken);
+        return postForm(url, form);
+    }
+
+    public FacebookGraphIdResponse uploadPhoto(String pageId, String pageAccessToken, String imageUrl, boolean published) {
+        String url = "https://graph.facebook.com/v25.0/" + pageId + "/photos";
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("url", imageUrl);
+        form.add("published", String.valueOf(published));
+        form.add("access_token", pageAccessToken);
+        return postForm(url, form);
+    }
+
+    public FacebookGraphIdResponse publishPhotoFeedPost(String pageId, String pageAccessToken, String message, List<String> photoIds) {
+        if (photoIds == null || photoIds.isEmpty()) {
+            return publishTextPost(pageId, pageAccessToken, message);
+        }
+
+        String url = "https://graph.facebook.com/v25.0/" + pageId + "/feed";
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("message", message);
+        form.add("access_token", pageAccessToken);
+
+        String attachedMedia = photoIds.stream()
+            .map(id -> "{\"media_fbid\":\"" + id + "\"}")
+            .collect(Collectors.joining(",", "[", "]"));
+        form.add("attached_media", attachedMedia);
+
+        return postForm(url, form);
     }
 }
 

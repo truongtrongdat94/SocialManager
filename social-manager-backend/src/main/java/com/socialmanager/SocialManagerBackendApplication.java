@@ -1,17 +1,26 @@
 package com.socialmanager;
 
+import io.github.cdimascio.dotenv.Dotenv;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-
-import io.github.cdimascio.dotenv.Dotenv;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
+@EnableScheduling
 public class SocialManagerBackendApplication {
 
     public static void main(String[] args) {
-        //Nạp file .env 
-        Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
+        Dotenv dotenv = Dotenv.configure()
+            .ignoreIfMissing()
+            .filename(".env")
+            .load();
         dotenv.entries().forEach(entry -> System.setProperty(entry.getKey(), entry.getValue()));
+
+        Dotenv properties = Dotenv.configure()
+            .ignoreIfMissing()
+            .filename(".env.properties")
+            .load();
+        properties.entries().forEach(entry -> System.setProperty(entry.getKey(), entry.getValue()));
 
         SpringApplication.run(SocialManagerBackendApplication.class, args);
     }
