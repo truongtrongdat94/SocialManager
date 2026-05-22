@@ -17,6 +17,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 
+import java.net.URI;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -33,6 +37,7 @@ public class SocialAccountService {
     private final TikTokClient tikTokClient;
 
     private final JwtUtil jwtUtil;
+    private final ScheduledPostRepository scheduledPostRepository;
 
     @Value("${app.aes-secret:}")
     private String aesSecret;
@@ -51,6 +56,60 @@ public class SocialAccountService {
         if (aesSecret == null || aesSecret.trim().isEmpty()) {
             throw new IllegalStateException("Thiếu cấu hình app.aes-secret (AES_SECRET)");
         }
+    }
+
+    private String normalizeAndValidateMediaUrl(String rawUrl) {
+        if (rawUrl == null || rawUrl.trim().isEmpty()) {
+            throw new IllegalArgumentException("URL media không hợp lệ");
+        }
+
+        String candidate = rawUrl.trim();
+        URI uri;
+        try {
+            uri = URI.create(candidate);
+        } catch (Exception ex) {
+            throw new IllegalArgumentException("URL media không hợp lệ: " + rawUrl);
+        }
+
+        String scheme = uri.getScheme();
+        if (scheme == null || (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme))) {
+            throw new IllegalArgumentException("URL media phải bắt đầu bằng http/https");
+        }
+
+        // Wikimedia page links like /wiki/File:... are not direct image URLs for Facebook.
+        String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase(Locale.ROOT);
+        String path = uri.getPath() == null ? "" : uri.getPath();
+        if (host.contains("commons.wikimedia.org") && path.startsWith("/wiki/File:")) {
+            String fileName = path.substring("/wiki/File:".length());
+            fileName = URLDecoder.decode(fileName, StandardCharsets.UTF_8);
+            candidate = "https://commons.wikimedia.org/wiki/Special:FilePath/" + URLEncoder.encode(fileName, StandardCharsets.UTF_8).replace("+", "%20");
+            uri = URI.create(candidate);
+        }
+
+        // Remove fragment because Facebook fetches server-side and fragments are client-side only.
+        if (uri.getFragment() != null) {
+            try {
+                uri = new URI(uri.getScheme(), uri.getUserInfo(), uri.getHost(), uri.getPort(), uri.getPath(), uri.getQuery(), null);
+            } catch (Exception ex) {
+                throw new IllegalArgumentException("URL media không hợp lệ: " + rawUrl);
+            }
+        }
+
+        String normalized = uri.toString();
+        String lower = normalized.toLowerCase(Locale.ROOT);
+        boolean hasImageExtension = lower.contains(".jpg")
+            || lower.contains(".jpeg")
+            || lower.contains(".png")
+            || lower.contains(".gif")
+            || lower.contains(".webp")
+            || lower.contains(".bmp")
+            || lower.contains(".svg");
+
+        if (!hasImageExtension) {
+            throw new IllegalArgumentException("URL media phải là link ảnh trực tiếp (jpg, jpeg, png, gif, webp, bmp, svg)");
+        }
+
+        return normalized;
     }
 
     private SocialAccountDto mapToDto(SocialAccount account) {
@@ -202,6 +261,11 @@ public class SocialAccountService {
 
     @Transactional
     public String publishFacebookPost(UUID accountId, String username, String caption, List<String> mediaUrls) {
+        return publishFacebookPost(accountId, username, caption, mediaUrls, true);
+    }
+
+    @Transactional
+    public String publishFacebookPost(UUID accountId, String username, String caption, List<String> mediaUrls, boolean saveHistory) {
         assertAesSecretConfigured();
         UUID userId = userRepository.findByUsername(username).map(User::getId)
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -217,16 +281,38 @@ public class SocialAccountService {
             String pageAccessToken = EncryptionUtil.decrypt(account.getAccessToken(), aesSecret);
             String pageId = account.getExternalAccountId();
 
+            String publishedId;
             if (mediaUrls == null || mediaUrls.isEmpty()) {
-                return facebookClient.publishTextPost(pageId, pageAccessToken, caption).id();
+                publishedId = facebookClient.publishTextPost(pageId, pageAccessToken, caption).id();
+            } else {
+                List<String> photoIds = new ArrayList<>();
+                for (String mediaUrl : mediaUrls) {
+                    String normalizedUrl = normalizeAndValidateMediaUrl(mediaUrl);
+                    photoIds.add(facebookClient.uploadPhoto(pageId, pageAccessToken, normalizedUrl, false).id());
+                }
+
+                publishedId = facebookClient.publishPhotoFeedPost(pageId, pageAccessToken, caption, photoIds).id();
             }
 
-            List<String> photoIds = new ArrayList<>();
-            for (String mediaUrl : mediaUrls) {
-                photoIds.add(facebookClient.uploadPhoto(pageId, pageAccessToken, mediaUrl, false).id());
+            if (saveHistory) {
+                try {
+                    ScheduledPost sp = ScheduledPost.builder()
+                        .user(account.getUser())
+                        .socialAccount(account)
+                        .caption(caption)
+                        .mediaUrls(mediaUrls != null ? mediaUrls.toArray(new String[0]) : null)
+                        .scheduledTime(LocalDateTime.now())
+                        .status("POSTED")
+                        .publishedPostId(publishedId)
+                        .build();
+
+                    scheduledPostRepository.save(sp);
+                } catch (Exception e) {
+                    System.err.println("Failed to save publish history: " + e.getMessage());
+                }
             }
 
-            return facebookClient.publishPhotoFeedPost(pageId, pageAccessToken, caption, photoIds).id();
+            return publishedId;
         } catch (Exception e) {
             throw new RuntimeException("Lỗi khi đăng bài Facebook", e);
         }

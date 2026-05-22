@@ -93,7 +93,8 @@ public class ScheduledPostService {
                 scheduledPost.getSocialAccount().getId(),
                 scheduledPost.getUser().getUsername(),
                 scheduledPost.getCaption(),
-                scheduledPost.getMediaUrls() != null ? Arrays.asList(scheduledPost.getMediaUrls()) : List.of()
+                scheduledPost.getMediaUrls() != null ? Arrays.asList(scheduledPost.getMediaUrls()) : List.of(),
+                false
             );
             scheduledPost.setStatus(STATUS_POSTED);
             scheduledPost.setPublishedPostId(publishedId);

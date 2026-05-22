@@ -9,6 +9,7 @@ type ScheduledPostHistoryItem = {
 	scheduledTime: string;
 	status: string;
 	publishedPostId: string | null;
+		publishedPostUrl?: string | null;
 	errorMessage: string | null;
 	createdAt: string;
 	accountName: string | null;
@@ -67,6 +68,7 @@ export function PostHistory() {
 								<p><span className="font-semibold">Scheduled:</span> {new Date(item.scheduledTime).toLocaleString()}</p>
 								<p><span className="font-semibold">Created:</span> {new Date(item.createdAt).toLocaleString()}</p>
 								{item.publishedPostId ? <p><span className="font-semibold">Published ID:</span> {item.publishedPostId}</p> : null}
+								{item.publishedPostUrl ? <p><span className="font-semibold">Link:</span> <a href={item.publishedPostUrl} target="_blank" rel="noreferrer" className="text-sky-600">Mở bài đã đăng</a></p> : null}
 								{item.errorMessage ? <p className="text-rose-600"><span className="font-semibold">Error:</span> {item.errorMessage}</p> : null}
 							</div>
 
