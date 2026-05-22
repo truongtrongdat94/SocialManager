@@ -48,7 +48,15 @@ public class SocialAccountService {
     }
 
     private SocialAccountDto mapToDto(SocialAccount account) {
-        return new SocialAccountDto(account.getId(), account.getPlatform(), account.getAccountName(), account.getAccountAlias(), account.getProfilePictureUrl(), account.getIsAutoPilot());
+        return new SocialAccountDto(
+            account.getId(), 
+            account.getPlatform(), 
+            account.getExternalAccountId(),
+            account.getAccountName(), 
+            account.getAccountAlias(), 
+            account.getProfilePictureUrl(), 
+            account.getIsAutoPilot()
+        );
     }
 
     public String generateAuthUrl(Platform platform, String username) {
@@ -87,7 +95,6 @@ public class SocialAccountService {
         TokenResponse tokenResponse = facebookClient.exchangeCodeForFacebookLongToken(code);
 
         List<Page> pages = facebookClient.fetchFacebookPages(tokenResponse.accessToken());
-        System.out.println("Page list: " + pages);
 
         for (Page page : pages) {
             try {
@@ -103,7 +110,6 @@ public class SocialAccountService {
         User user = findUserByIdentifier(username);
         TokenResponse tokenResponse = instagramClient.exchangeCodeForInstagramLongToken(code);
         InstagramResponse account = instagramClient.fetchInstagramAccount(tokenResponse.accessToken());
-        System.out.println("Instagram account: " + account);
         try {
             saveSocialAccountToDatabase(user, Platform.INSTAGRAM, account.id(), account.username(), account.name(), account.pictureUrl(), tokenResponse.accessToken(), null, tokenResponse.expiresIn());
         } catch (Exception e) {
@@ -116,7 +122,6 @@ public class SocialAccountService {
         User user = findUserByIdentifier(username);
         TokenResponse tokenResponse = threadsClient.exchangeCodeForThreadsLongToken(code);
         ThreadsResponse account = threadsClient.fetchThreadsAccount(tokenResponse.accessToken());
-        System.out.println("Threads account: " + account);
         try {
             saveSocialAccountToDatabase(user, Platform.THREADS, account.id(), account.username(), account.name(), account.pictureUrl(), tokenResponse.accessToken(), null, tokenResponse.expiresIn());
         } catch (Exception e) {
@@ -129,7 +134,6 @@ public class SocialAccountService {
         User user = findUserByIdentifier(username);
         TokenResponse tokenResponse = tikTokClient.exchangeCodeForTikTokAccessToken(code, codeVerifier);
         TikTok account = tikTokClient.fetchTikTokAccount(tokenResponse.accessToken());
-        System.out.println("TikTok account: " + account);
         try {
             saveSocialAccountToDatabase(user, Platform.TIKTOK, account.id(), account.name(), account.name(), account.pictureUrl(), tokenResponse.accessToken(), tokenResponse.refreshToken(), tokenResponse.expiresIn());
         } catch (Exception e) {

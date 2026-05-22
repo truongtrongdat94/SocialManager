@@ -1,10 +1,19 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useLocation } from "react-router";
 import toast from "react-hot-toast";
+import { api } from "../../lib/api";
 
 type IncomingAiState = {
 	caption?: string;
 	imageUrl?: string;
+};
+
+type SocialAccount = {
+	id: string;
+	platform: string;
+	externalAccountId: string;
+	accountName: string;
+	profilePictureUrl: string;
 };
 
 export function Post() {
@@ -15,12 +24,76 @@ export function Post() {
 	const [imageUrl, setImageUrl] = useState(incoming?.imageUrl ?? "");
 	const [postMode, setPostMode] = useState<"now" | "schedule">("now");
 	const [scheduledAt, setScheduledAt] = useState("");
+	const [isPosting, setIsPosting] = useState(false);
+	
+	// Danh sách tài khoản và tài khoản được chọn
+	const [accounts, setAccounts] = useState<SocialAccount[]>([]);
+	const [selectedPageId, setSelectedPageId] = useState<string>("");
+	
+	// Danh sách bài đã lên lịch
+	const [scheduledPosts, setScheduledPosts] = useState<any[]>([]);
+	const [showScheduled, setShowScheduled] = useState(false);
 
-	const canPublish = useMemo(() => caption.trim().length > 0, [caption]);
+	const canPublish = useMemo(() => {
+		return caption.trim().length > 0 && selectedPageId.length > 0;
+	}, [caption, selectedPageId]);
 
-	const handlePublish = () => {
+	// Load scheduled posts khi chọn page
+	const loadScheduledPosts = async (pageId: string) => {
+		if (!pageId) return;
+		
+		try {
+			const response = await api.get(`/api/posts/${pageId}/scheduled`);
+			const posts = response.data.data || [];
+			console.log('📅 Scheduled posts response:', posts);
+			setScheduledPosts(posts);
+		} catch (error) {
+			console.error("Lỗi khi load bài đã lên lịch:", error);
+		}
+	};
+
+	// Load danh sách tài khoản Facebook
+	useEffect(() => {
+		let isMounted = true;
+
+		const fetchAccounts = async () => {
+			try {
+				const response = await api.get("/api/social-accounts");
+				
+				if (!isMounted) return;
+				
+				// API returns ApiResponse<List<SocialAccountDto>> format: { data: [...], success: true, message: "..." }
+				const allAccounts = response.data.data || response.data;
+				
+				const facebookAccounts = allAccounts.filter(
+					(acc: SocialAccount) => acc.platform === "FACEBOOK"
+				);
+				
+				setAccounts(facebookAccounts);
+				
+				// Auto-select first account
+				if (facebookAccounts.length > 0 && facebookAccounts[0].externalAccountId) {
+					setSelectedPageId(facebookAccounts[0].externalAccountId);
+					loadScheduledPosts(facebookAccounts[0].externalAccountId);
+				}
+			} catch (error: any) {
+				if (!isMounted) return;
+				
+				console.error("Lỗi khi load tài khoản:", error);
+				toast.error("Không thể tải danh sách tài khoản Facebook");
+			}
+		};
+
+		fetchAccounts();
+		
+		return () => {
+			isMounted = false;
+		};
+	}, []);
+
+	const handlePublish = async () => {
 		if (!canPublish) {
-			toast.error("Vui lòng nhập caption trước khi đăng.");
+			toast.error("Vui lòng nhập caption và chọn tài khoản trước khi đăng.");
 			return;
 		}
 
@@ -29,11 +102,52 @@ export function Post() {
 			return;
 		}
 
-		toast.success(
-			postMode === "now"
-				? "Đã gửi yêu cầu đăng ngay (demo UI)."
-				: `Đã gửi yêu cầu lên lịch lúc ${scheduledAt} (demo UI).`,
-		);
+		setIsPosting(true);
+
+		try {
+			// Convert datetime-local to Unix timestamp (seconds)
+			const scheduledTimestamp = postMode === "schedule" 
+				? Math.floor(new Date(scheduledAt).getTime() / 1000) 
+				: null;
+
+			if (imageUrl && imageUrl.trim().length > 0) {
+				// Đăng ảnh
+				await api.post(`/api/posts/${selectedPageId}/photo`, {
+					photoUrl: imageUrl,
+					caption: caption,
+					scheduledPublishTime: scheduledTimestamp
+				});
+			} else {
+				// Đăng text
+				await api.post(`/api/posts/${selectedPageId}`, {
+					message: caption,
+					scheduledPublishTime: scheduledTimestamp
+				});
+			}
+
+			toast.success(
+				postMode === "now"
+					? "Đã đăng bài thành công!"
+					: `Đã lên lịch đăng lúc ${new Date(scheduledAt).toLocaleString("vi-VN")}`
+			);
+
+			// Reset form
+			setCaption("");
+			setImageUrl("");
+			setScheduledAt("");
+			setPostMode("now");
+			
+			// Reload scheduled posts
+			if (postMode === "schedule") {
+				loadScheduledPosts(selectedPageId);
+			}
+		} catch (error: any) {
+			console.error("Lỗi khi đăng bài:", error);
+			const errorMessage = error.response?.data?.message || error.message || "Có lỗi xảy ra";
+			toast.error("Lỗi khi đăng bài: " + errorMessage);
+		} finally {
+			setIsPosting(false);
+		}
 	};
 
 	return (
@@ -44,7 +158,7 @@ export function Post() {
 			<div className="mb-8 rounded-[24px] border border-sky-100/80 bg-white/75 px-5 py-5 backdrop-blur-sm">
 				<h1 className="text-3xl font-bold tracking-tight text-sky-800">Đăng bài</h1>
 				<p className="mt-2 text-base text-sky-700/80">
-					Trang này nhận dữ liệu từ AI Dashboard qua router state: caption + imageUrl.
+					Đăng bài lên Facebook Page với khả năng lên lịch tự động.
 				</p>
 			</div>
 
@@ -53,6 +167,30 @@ export function Post() {
 					<h2 className="mb-5 text-xl font-bold text-sky-800">Nội dung</h2>
 
 					<div className="space-y-4">
+						<div>
+							<label className="mb-2 block text-sm font-semibold text-sky-700">Chọn Facebook Page</label>
+							<select
+								value={selectedPageId}
+								onChange={(e) => {
+									setSelectedPageId(e.target.value);
+									loadScheduledPosts(e.target.value);
+								}}
+								className="h-11 w-full rounded-xl border border-sky-200 bg-[#f7fcff] px-4 text-sm text-sky-900 outline-none transition focus:border-sky-400 focus:shadow-[0_0_0_4px_rgba(56,189,248,0.18)]"
+							>
+								<option value="">-- Chọn Page --</option>
+								{accounts.map((acc) => (
+									<option key={acc.id} value={acc.externalAccountId}>
+										{acc.accountName} {acc.externalAccountId ? `(${acc.externalAccountId})` : '(No Page ID)'}
+									</option>
+								))}
+							</select>
+							{accounts.length > 0 && !accounts[0].externalAccountId && (
+								<p className="mt-2 text-sm text-red-600">
+									⚠️ Tài khoản không có Page ID. Vui lòng xóa và kết nối lại.
+								</p>
+							)}
+						</div>
+
 						<div>
 							<label className="mb-2 block text-sm font-semibold text-sky-700">Caption</label>
 							<textarea
@@ -65,7 +203,7 @@ export function Post() {
 						</div>
 
 						<div>
-							<label className="mb-2 block text-sm font-semibold text-sky-700">Image URL</label>
+							<label className="mb-2 block text-sm font-semibold text-sky-700">Image URL (tùy chọn)</label>
 							<input
 								value={imageUrl}
 								onChange={(e) => setImageUrl(e.target.value)}
@@ -80,11 +218,35 @@ export function Post() {
 					<h2 className="mb-5 text-xl font-bold text-sky-800">Preview & Publish</h2>
 
 					<div className="space-y-4">
-						<div className="overflow-hidden rounded-[28px] border border-sky-200 bg-gradient-to-br from-[#f6fcff] to-[#e9f7ff]">
+						{/* Facebook-style Preview */}
+						<div className="overflow-hidden rounded-2xl border border-sky-200 bg-white">
+							{/* Page Header */}
+							<div className="flex items-center gap-3 border-b border-gray-200 p-4">
+								<div className="h-10 w-10 rounded-full bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center text-white font-bold">
+									{accounts.find(acc => acc.externalAccountId === selectedPageId)?.accountName?.charAt(0) || 'P'}
+								</div>
+								<div>
+									<div className="font-semibold text-gray-900 text-sm">
+										{accounts.find(acc => acc.externalAccountId === selectedPageId)?.accountName || 'Chọn Page'}
+									</div>
+									<div className="text-xs text-gray-500">Vừa xong · 🌍</div>
+								</div>
+							</div>
+							
+							{/* Caption */}
+							{caption && (
+								<div className="px-4 py-3 text-sm text-gray-800 whitespace-pre-wrap">
+									{caption}
+								</div>
+							)}
+							
+							{/* Image */}
 							{imageUrl ? (
-								<img src={imageUrl} alt="Post media preview" className="h-[320px] w-full object-cover" />
+								<img src={imageUrl} alt="Post preview" className="w-full max-h-[400px] object-cover" />
 							) : (
-								<div className="flex h-[320px] items-center justify-center text-sm text-sky-600">Chưa có ảnh preview</div>
+								<div className="flex h-[200px] items-center justify-center bg-gray-50 text-sm text-gray-400">
+									{caption ? 'Bài viết text' : 'Chưa có nội dung'}
+								</div>
 							)}
 						</div>
 
@@ -130,11 +292,65 @@ export function Post() {
 						<button
 							type="button"
 							onClick={handlePublish}
-							disabled={!canPublish}
+							disabled={!canPublish || isPosting}
 							className="h-12 w-full rounded-full bg-sky-600 px-5 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-60"
 						>
-							Xác nhận đăng bài
+							{isPosting ? "Đang đăng..." : "Xác nhận đăng bài"}
 						</button>
+						
+						{/* Scheduled Posts Section */}
+						{scheduledPosts.length > 0 && (
+							<div className="mt-6 rounded-2xl border border-sky-200 bg-sky-50/50 p-4">
+								<button
+									type="button"
+									onClick={() => setShowScheduled(!showScheduled)}
+									className="flex w-full items-center justify-between text-sm font-semibold text-sky-700 hover:text-sky-800"
+								>
+									<span>📅 Bài đã lên lịch ({scheduledPosts.length})</span>
+									<span className="text-lg">{showScheduled ? '▼' : '▶'}</span>
+								</button>
+								
+								{showScheduled && (
+									<div className="mt-4 space-y-3 max-h-96 overflow-y-auto">
+										{scheduledPosts.map((post: any) => (
+											<div key={post.id} className="rounded-xl border border-sky-200 bg-white p-4 shadow-sm">
+												{/* Scheduled Time */}
+												<div className="mb-3 flex items-center gap-2 text-sm font-semibold text-sky-700">
+													<span>🕐</span>
+													<span>
+														{post.scheduled_publish_time 
+															? new Date(post.scheduled_publish_time * 1000).toLocaleString("vi-VN", {
+																	year: 'numeric',
+																	month: '2-digit',
+																	day: '2-digit',
+																	hour: '2-digit',
+																	minute: '2-digit'
+															  })
+															: "Chưa có thời gian"}
+													</span>
+												</div>
+												
+												{/* Caption */}
+												{post.message && (
+													<p className="text-sm text-gray-800 mb-3 line-clamp-3 whitespace-pre-wrap">
+														{post.message}
+													</p>
+												)}
+												
+												{/* Image if exists */}
+												{post.full_picture && (
+													<img 
+														src={post.full_picture} 
+														alt="Scheduled post" 
+														className="w-full h-40 object-cover rounded-lg"
+													/>
+												)}
+											</div>
+										))}
+									</div>
+								)}
+							</div>
+						)}
 					</div>
 				</section>
 			</div>

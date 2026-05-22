@@ -71,6 +71,7 @@ export const api = axios.create({
 	headers: {
 		"Content-Type": "application/json",
 	},
+	withCredentials: true, // Enable sending cookies
 });
 
 api.interceptors.request.use((config) => {
@@ -120,25 +121,16 @@ api.interceptors.response.use(
 			originalRequest._retry = true;
 			isRefreshing = true;
 
-			const refreshToken = localStorage.getItem("refreshToken");
-			if (!refreshToken) {
-				localStorage.removeItem("accessToken");
-				localStorage.removeItem("refreshToken");
-				if (!window.location.pathname.includes("/login")) {
-					window.location.href = "/login";
-				}
-				return Promise.reject(error);
-			}
-
 			try {
+				// Call refresh endpoint - refresh token is sent automatically via cookie
 				const response = await axios.post<ApiResponse<AuthResponse>>(
 					`${baseURL}/api/auth/refresh`,
-					{ refreshToken }
+					{}, // Empty body - refresh token is in cookie
+					{ withCredentials: true } // Enable sending cookies
 				);
-				const { accessToken, refreshToken: newRefreshToken } = response.data.data;
+				const { accessToken } = response.data.data;
 
 				localStorage.setItem("accessToken", accessToken);
-				localStorage.setItem("refreshToken", newRefreshToken);
 
 				if (originalRequest.headers) {
 					originalRequest.headers.Authorization = `Bearer ${accessToken}`;
@@ -149,7 +141,6 @@ api.interceptors.response.use(
 			} catch (refreshError) {
 				processQueue(refreshError, null);
 				localStorage.removeItem("accessToken");
-				localStorage.removeItem("refreshToken");
 				if (!window.location.pathname.includes("/login")) {
 					window.location.href = "/login";
 				}

@@ -4,3 +4,5 @@ export { Stats } from "./stats/Stats.tsx";
 export { Login } from "./login/Login.tsx";
 export { Register } from "./register/Register.tsx";
 export { OAuthCallback } from "./auth/OAuthCallback.tsx";
+export { AutoPilot } from "./autopilot/AutoPilot.tsx";
+export { History } from "./history/History.tsx";

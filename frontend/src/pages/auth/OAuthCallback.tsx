@@ -8,11 +8,11 @@ export function OAuthCallback() {
 
 	useEffect(() => {
 		const accessToken = searchParams.get("accessToken");
-		const refreshToken = searchParams.get("refreshToken");
 
-		if (accessToken && refreshToken) {
+		if (accessToken) {
+			// Only save access token, refresh token is in httpOnly cookie
 			localStorage.setItem("accessToken", accessToken);
-			localStorage.setItem("refreshToken", refreshToken);
+			
 			toast.success("Đăng nhập thành công");
 			navigate("/dashboard/ai");
 		} else {
