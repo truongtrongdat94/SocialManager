@@ -39,8 +39,9 @@ export function Login() {
 		try {
 			setLoading(true);
 			const response = await api.post<ApiResponse<AuthResponse>>("/api/auth/login", form);
-			const token = response.data.data.token;
-			localStorage.setItem("token", token);
+			const { accessToken, refreshToken } = response.data.data;
+			localStorage.setItem("accessToken", accessToken);
+			localStorage.setItem("refreshToken", refreshToken);
 			toast.success("Đăng nhập thành công");
 			navigate("/dashboard/ai");
 		} catch (error) {
@@ -48,6 +49,11 @@ export function Login() {
 		} finally {
 			setLoading(false);
 		}
+	};
+
+	const handleGoogleLogin = () => {
+		const backendUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+		window.location.href = `${backendUrl}/oauth2/authorization/google`;
 	};
 
 	return (
@@ -167,6 +173,21 @@ export function Login() {
 							{loading ? "Đang đăng nhập..." : "Login"}
 						</button>
 					</form>
+
+					<div className="my-4 flex items-center gap-3">
+						<div className="h-px flex-1 bg-sky-200"></div>
+						<span className="text-sm font-medium text-sky-600">hoặc</span>
+						<div className="h-px flex-1 bg-sky-200"></div>
+					</div>
+
+					<button
+						type="button"
+						onClick={handleGoogleLogin}
+						className="flex h-12 w-full items-center justify-center gap-3 rounded-[4px] border-2 border-sky-300 bg-white text-base font-semibold text-sky-700 transition hover:bg-sky-50"
+					>
+						<img src="/google-icon.svg" alt="Google" className="h-5 w-5" />
+						Đăng nhập với Google
+					</button>
 
 					<p className="mt-5 text-center text-base text-sky-700">
 						Chưa có tài khoản?{" "}

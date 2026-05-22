@@ -38,12 +38,13 @@ public class AIController {
      * Hàm dùng chung để bắt thông tin User đang gọi API từ JWT Token
      */
     private User getCurrentAuthenticatedUser() {
-        // Cái getName() này hiện tại do module Auth quyết định, khả năng cao nó đang trả về Username
-        String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+        // getName() có thể trả về email (Google OAuth) hoặc username (local login)
+        String identifier = SecurityContextHolder.getContext().getAuthentication().getName();
         
-        // SỬA Ở ĐÂY: Đổi findByEmail thành findByUsername
-        return userRepository.findByUsername(currentUsername)
-                .orElseThrow(() -> new RuntimeException("Lỗi Auth: Không tìm thấy User có username là [" + currentUsername + "] trong Database!"));
+        // Tìm theo email trước, nếu không có thì tìm theo username
+        return userRepository.findByEmail(identifier)
+                .or(() -> userRepository.findByUsername(identifier))
+                .orElseThrow(() -> new RuntimeException("Lỗi Auth: Không tìm thấy User có identifier [" + identifier + "] trong Database!"));
     }
 
     @PostMapping("/generate-caption")
@@ -61,8 +62,10 @@ public class AIController {
 
     @GetMapping("/history")
     public ResponseEntity<?> getHistory(@AuthenticationPrincipal UserDetails userDetails) {
-        // 1. Tìm thực thể User đầy đủ từ username trong Token
-        User currentUser = userRepository.findByUsername(userDetails.getUsername())
+        // 1. Tìm thực thể User đầy đủ từ email hoặc username trong Token
+        String identifier = userDetails.getUsername(); // Có thể là email hoặc username
+        User currentUser = userRepository.findByEmail(identifier)
+                .or(() -> userRepository.findByUsername(identifier))
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         // 2. Gọi hàm Service mới để lấy đúng đồ của mình
@@ -75,22 +78,27 @@ public class AIController {
 }
 
     @PostMapping("/generate-image")
-    public ResponseEntity<?> generateImage(@RequestBody Map<String, String> request) {
+    public ResponseEntity<ApiResponse<Map<String, String>>> generateImage(@RequestBody Map<String, String> request) {
         String prompt = request.get("prompt");
         
-        // 1. Lấy User xịn từ Token
-        User currentUser = getCurrentAuthenticatedUser(); 
-    
-        // 2. Thay chữ 'null' bằng currentUser
-        ImageGeneration imgGen = imageGenService.startImageGeneration(prompt, currentUser);
-    
-        if (imgGen != null) {
-            return ResponseEntity.ok(Map.of(
-                "message", "Đã gửi yêu cầu, vui lòng đợi AI vẽ ảnh!", 
-                "generationId", imgGen.getLeonardoGenerationId()
+        try {
+            // 1. Lấy User xịn từ Token
+            User currentUser = getCurrentAuthenticatedUser(); 
+        
+            // 2. Thay chữ 'null' bằng currentUser
+            ImageGeneration imgGen = imageGenService.startImageGeneration(prompt, currentUser);
+        
+            return ResponseEntity.ok(new ApiResponse<>(
+                true,
+                "Đã gửi yêu cầu, vui lòng đợi AI vẽ ảnh!",
+                Map.of("generationId", imgGen.getLeonardoGenerationId())
             ));
-        } else {
-            return ResponseEntity.status(500).body(Map.of("error", "Có lỗi xảy ra khi gọi Leonardo"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new ApiResponse<>(
+                false,
+                e.getMessage(),
+                null
+            ));
         }
     }
 }

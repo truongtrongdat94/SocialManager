@@ -6,6 +6,7 @@ import java.util.UUID;
 public record SocialAccountDto(
         UUID id,
         Platform platform,
+        String externalAccountId,
         String accountName,
         String accountAlias,
         String profilePictureUrl,

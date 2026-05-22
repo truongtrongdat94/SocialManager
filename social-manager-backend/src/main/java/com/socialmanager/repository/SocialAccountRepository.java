@@ -23,4 +23,7 @@ public interface SocialAccountRepository extends JpaRepository<SocialAccount, UU
     Optional<SocialAccount> findByIdAndUserId(UUID id, UUID userId);
 
     List<SocialAccount> findByExpiresAtBefore(LocalDateTime threshold);
+
+    // Find by user ID and external account ID (Page ID)
+    Optional<SocialAccount> findByUserIdAndExternalAccountId(UUID userId, String externalAccountId);
 }

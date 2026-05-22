@@ -1,5 +1,6 @@
 package com.socialmanager.service;
 
+import com.socialmanager.dto.AuthResponse;
 import com.socialmanager.dto.LoginRequest;
 import com.socialmanager.dto.RegisterRequest;
 import com.socialmanager.dto.UserDto;
@@ -12,7 +13,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Service
@@ -58,13 +61,65 @@ public class AuthService {
     }
 
     // Task 4.7: login — find by username, verify BCrypt, return JWT
-    public String login(LoginRequest request) {
+    @Transactional
+    public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByUsername(request.username())
                 .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new BadCredentialsException("Invalid credentials");
         }
-        return jwtUtil.generateToken(user.getUsername());
+        
+        String accessToken = jwtUtil.generateToken(user.getUsername());
+        String refreshToken = jwtUtil.generateRefreshToken(user.getUsername());
+        
+        // Save refresh token to database
+        user.setRefreshToken(refreshToken);
+        user.setRefreshTokenExpiresAt(
+            LocalDateTime.now().plusSeconds(jwtUtil.getRefreshExpirationMs() / 1000)
+        );
+        userRepository.save(user);
+        
+        return new AuthResponse(accessToken, refreshToken);
+    }
+
+    // Refresh access token using refresh token
+    @Transactional
+    public AuthResponse refreshAccessToken(String refreshToken) {
+        // Validate refresh token format
+        if (!jwtUtil.validateToken(refreshToken)) {
+            throw new BadCredentialsException("Invalid refresh token");
+        }
+        
+        // Get username from token
+        String username = jwtUtil.getUsernameFromToken(refreshToken);
+        
+        // Find user and verify refresh token
+        // username from JWT might be email (OAuth2) or username (local login)
+        User user = userRepository.findByUsername(username)
+                .or(() -> userRepository.findByEmail(username))
+                .orElseThrow(() -> new BadCredentialsException("User not found"));
+        
+        if (user.getRefreshToken() == null || !user.getRefreshToken().equals(refreshToken)) {
+            throw new BadCredentialsException("Invalid refresh token");
+        }
+        
+        if (user.getRefreshTokenExpiresAt() == null || 
+            user.getRefreshTokenExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new BadCredentialsException("Refresh token expired");
+        }
+        
+        // Generate new tokens
+        String newAccessToken = jwtUtil.generateToken(username);
+        String newRefreshToken = jwtUtil.generateRefreshToken(username);
+        
+        // Update refresh token in database
+        user.setRefreshToken(newRefreshToken);
+        user.setRefreshTokenExpiresAt(
+            LocalDateTime.now().plusSeconds(jwtUtil.getRefreshExpirationMs() / 1000)
+        );
+        userRepository.save(user);
+        
+        return new AuthResponse(newAccessToken, newRefreshToken);
     }
 
     // Task 4.12: getCurrentUser — try findByEmail, then findByUsername
@@ -73,5 +128,10 @@ public class AuthService {
                 .or(() -> userRepository.findByUsername(subject))
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         return new UserDto(user.getId(), user.getEmail(), user.getUsername(), user.getName());
+    }
+
+    // Save user (used by OAuth2)
+    public User saveUser(User user) {
+        return userRepository.save(user);
     }
 }

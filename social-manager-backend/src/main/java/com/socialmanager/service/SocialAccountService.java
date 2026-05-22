@@ -37,8 +37,26 @@ public class SocialAccountService {
     @Value("${AES_SECRET}")
     private String aesSecret;
 
+    /**
+     * Helper method to find user by email or username
+     * Supports both Google OAuth (email) and local login (username)
+     */
+    private User findUserByIdentifier(String identifier) {
+        return userRepository.findByEmail(identifier)
+                .or(() -> userRepository.findByUsername(identifier))
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + identifier));
+    }
+
     private SocialAccountDto mapToDto(SocialAccount account) {
-        return new SocialAccountDto(account.getId(), account.getPlatform(), account.getAccountName(), account.getAccountAlias(), account.getProfilePictureUrl(), account.getIsAutoPilot());
+        return new SocialAccountDto(
+            account.getId(), 
+            account.getPlatform(), 
+            account.getExternalAccountId(),
+            account.getAccountName(), 
+            account.getAccountAlias(), 
+            account.getProfilePictureUrl(), 
+            account.getIsAutoPilot()
+        );
     }
 
     public String generateAuthUrl(Platform platform, String username) {
@@ -72,13 +90,11 @@ public class SocialAccountService {
 
     @Transactional
     public void connectFacebookAccount(String code, String username) {
-        User user = userRepository.findByUsername(username)
-            .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
+        User user = findUserByIdentifier(username);
 
         TokenResponse tokenResponse = facebookClient.exchangeCodeForFacebookLongToken(code);
 
         List<Page> pages = facebookClient.fetchFacebookPages(tokenResponse.accessToken());
-        System.out.println("Page list: " + pages);
 
         for (Page page : pages) {
             try {
@@ -91,11 +107,9 @@ public class SocialAccountService {
 
     @Transactional
     public void connectInstagramAccount(String code, String username) {
-        User user = userRepository.findByUsername(username)
-            .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
+        User user = findUserByIdentifier(username);
         TokenResponse tokenResponse = instagramClient.exchangeCodeForInstagramLongToken(code);
         InstagramResponse account = instagramClient.fetchInstagramAccount(tokenResponse.accessToken());
-        System.out.println("Instagram account: " + account);
         try {
             saveSocialAccountToDatabase(user, Platform.INSTAGRAM, account.id(), account.username(), account.name(), account.pictureUrl(), tokenResponse.accessToken(), null, tokenResponse.expiresIn());
         } catch (Exception e) {
@@ -105,11 +119,9 @@ public class SocialAccountService {
 
     @Transactional
     public void connectThreadsAccount(String code, String username) {
-        User user = userRepository.findByUsername(username)
-            .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
+        User user = findUserByIdentifier(username);
         TokenResponse tokenResponse = threadsClient.exchangeCodeForThreadsLongToken(code);
         ThreadsResponse account = threadsClient.fetchThreadsAccount(tokenResponse.accessToken());
-        System.out.println("Threads account: " + account);
         try {
             saveSocialAccountToDatabase(user, Platform.THREADS, account.id(), account.username(), account.name(), account.pictureUrl(), tokenResponse.accessToken(), null, tokenResponse.expiresIn());
         } catch (Exception e) {
@@ -119,11 +131,9 @@ public class SocialAccountService {
 
     @Transactional
     public void connectTikTokAccount(String code, String codeVerifier, String username) {
-        User user = userRepository.findByUsername(username)
-            .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
+        User user = findUserByIdentifier(username);
         TokenResponse tokenResponse = tikTokClient.exchangeCodeForTikTokAccessToken(code, codeVerifier);
         TikTok account = tikTokClient.fetchTikTokAccount(tokenResponse.accessToken());
-        System.out.println("TikTok account: " + account);
         try {
             saveSocialAccountToDatabase(user, Platform.TIKTOK, account.id(), account.name(), account.name(), account.pictureUrl(), tokenResponse.accessToken(), tokenResponse.refreshToken(), tokenResponse.expiresIn());
         } catch (Exception e) {
@@ -177,8 +187,8 @@ public class SocialAccountService {
     }
 
     public SocialAccountDto getSocialAccountByIdAndUsername(UUID id, String username) {
-        UUID userId = userRepository.findByUsername(username).map(User::getId)
-            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        User user = findUserByIdentifier(username);
+        UUID userId = user.getId();
 
         SocialAccount account = socialAccountRepository.findByIdAndUserId(id, userId)
             .orElseThrow(() -> new ResourceNotFoundException("Social account not found or access denied"));
@@ -187,7 +197,8 @@ public class SocialAccountService {
     }
 
     public List<SocialAccountDto> getSocialAccountsByUsername(String username) {
-        UUID userId = userRepository.findByUsername(username).map(User::getId).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        User user = findUserByIdentifier(username);
+        UUID userId = user.getId();
 
         List<SocialAccount> accounts = socialAccountRepository.findByUserId(userId);
 
@@ -195,7 +206,7 @@ public class SocialAccountService {
     }
 
     public void deleteSocialAccountById(UUID id, String username) {
-        User user = userRepository.findByUsername(username).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        User user = findUserByIdentifier(username);
 
         SocialAccount account = socialAccountRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Social account not found"));
 
