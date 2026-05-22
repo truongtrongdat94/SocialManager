@@ -23,6 +23,45 @@ export function Accounts() {
 	const [apiKey, setApiKey] = useState("");
 	const [apiSecret, setApiSecret] = useState("");
 
+	// Facebook / Meta config fields (frontend admin panel)
+	const [showMetaForm, setShowMetaForm] = useState(false);
+	const [metaAppId, setMetaAppId] = useState("");
+	const [metaAppSecret, setMetaAppSecret] = useState("");
+	const [metaRedirectUri, setMetaRedirectUri] = useState("http://localhost:8080/api/social-accounts/callback/facebook");
+	const [metaHasSecret, setMetaHasSecret] = useState(false);
+	const [metaTesting, setMetaTesting] = useState(false);
+	const [metaReadyToConnect, setMetaReadyToConnect] = useState(false);
+
+	const saveMetaConfig = async () => {
+		try {
+			const payload = { appId: metaAppId, appSecret: metaAppSecret, redirectUri: metaRedirectUri };
+			await api.post("/api/admin/config/meta", payload);
+			toast.success("Meta/Facebook cấu hình đã lưu");
+			setMetaHasSecret(Boolean(metaAppSecret));
+			setMetaReadyToConnect(true);
+		} catch (err) {
+			toast.error(getApiErrorMessage(err));
+		}
+	};
+
+	const testMetaConfig = async () => {
+		try {
+			setMetaTesting(true);
+			const resp = await api.post<ApiResponse<string>>("/api/admin/config/meta/test");
+			const url = resp.data?.data;
+			if (typeof url === "string" && url.startsWith("http")) {
+				toast.success("Cấu hình hợp lệ — OAuth URL tạo được");
+				window.open(url, "_blank");
+			} else {
+				toast.error("Cấu hình không hợp lệ");
+			}
+		} catch (err) {
+			toast.error(getApiErrorMessage(err));
+		} finally {
+			setMetaTesting(false);
+		}
+	};
+
 	const fetchAccounts = async () => {
 		try {
 			setLoading(true);
@@ -31,6 +70,20 @@ export function Accounts() {
 			setCloudinaryValid(Boolean(cloudinaryResponse.data.data?.valid));
 			setCloudinaryCloudName(cloudinaryResponse.data.data?.cloudName ?? null);
 			setCloudinaryReason(cloudinaryResponse.data.data?.reason ?? null);
+
+			// Try to fetch existing Meta config (may 401 if not authenticated)
+			try {
+				const metaResp = await api.get<ApiResponse<{ appId?: string | null; redirectUri?: string | null; hasSecret?: boolean }>>("/api/admin/config/meta");
+				const meta = metaResp.data?.data;
+				if (meta) {
+					setMetaAppId(meta.appId ?? "");
+					setMetaRedirectUri(meta.redirectUri ?? metaRedirectUri);
+					setMetaHasSecret(Boolean(meta.hasSecret));
+					setMetaReadyToConnect(Boolean(meta.appId && meta.redirectUri && meta.hasSecret));
+				}
+			} catch (err) {
+				// ignore if unauthenticated or forbidden
+			}
 			const response = await api.get<ApiResponse<SocialAccountDto[]>>("/api/social-accounts");
 			setRows(Array.isArray(response.data.data) ? response.data.data : []);
 		} catch (error) {
@@ -66,6 +119,10 @@ export function Accounts() {
 		} catch (error) {
 			toast.error(getApiErrorMessage(error));
 		}
+	};
+
+	const openFacebookConfig = () => {
+		setShowMetaForm(true);
 	};
 
 	const handleDelete = async (id: string) => {
@@ -113,14 +170,25 @@ export function Accounts() {
 
 				<div className="flex flex-wrap gap-2">
 					{PLATFORM_OPTIONS.map((platform) => (
-						<button
-							key={platform}
-							type="button"
-							onClick={() => connectPlatform(platform)}
-							className="h-11 rounded-full border border-sky-200 bg-white px-5 text-sm font-semibold text-sky-700 transition hover:border-sky-300 hover:bg-sky-50"
-						>
-							Kết nối {platform}
-						</button>
+						platform === "facebook" ? (
+							<button
+								key={platform}
+								type="button"
+								onClick={openFacebookConfig}
+								className="h-11 rounded-full border border-sky-200 bg-white px-5 text-sm font-semibold text-sky-700 transition hover:border-sky-300 hover:bg-sky-50"
+							>
+								Kết nối Facebook
+							</button>
+						) : (
+							<button
+								key={platform}
+								type="button"
+								onClick={() => connectPlatform(platform)}
+								className="h-11 rounded-full border border-sky-200 bg-white px-5 text-sm font-semibold text-sky-700 transition hover:border-sky-300 hover:bg-sky-50"
+							>
+								Kết nối {platform}
+							</button>
+						)
 					))}
 
 					<button
@@ -130,6 +198,7 @@ export function Accounts() {
 					>
 						Kết nối Cloudinary
 					</button>
+
 				</div>
 			</div>
 
@@ -192,6 +261,30 @@ export function Accounts() {
 							<button onClick={saveCloudinary} className="h-10 rounded-full bg-sky-600 px-4 text-white">Lưu</button>
 							<button onClick={() => setShowCloudinaryForm(false)} className="h-10 rounded-full border px-4">Huỷ</button>
 						</div>
+					</div>
+				</section>
+			)}
+
+			{showMetaForm && (
+				<section className="mt-6 rounded-[28px] border border-sky-100 bg-white/90 p-6 shadow-[0_8px_24px_rgba(64,164,202,0.14)] lg:p-7">
+					<h3 className="mb-3 text-lg font-semibold text-sky-800">Cấu hình Meta / Facebook</h3>
+					<div className="space-y-3">
+						<input placeholder="App ID" value={metaAppId} onChange={(e) => setMetaAppId(e.target.value)} className="w-full rounded-xl border px-3 py-2" />
+						<input placeholder="App Secret" type="password" value={metaAppSecret} onChange={(e) => setMetaAppSecret(e.target.value)} className="w-full rounded-xl border px-3 py-2" />
+						<input placeholder="Redirect URI" value={metaRedirectUri} onChange={(e) => setMetaRedirectUri(e.target.value)} className="w-full rounded-xl border px-3 py-2" />
+						<div className="text-sm text-sky-700">{metaHasSecret ? "Secret đã lưu" : "Secret chưa lưu"}</div>
+						<div className="flex gap-2">
+							<button onClick={saveMetaConfig} className="h-10 rounded-full bg-sky-600 px-4 text-white">Lưu</button>
+							{metaReadyToConnect ? (
+								<button onClick={() => connectPlatform("facebook")} className="h-10 rounded-full bg-emerald-600 px-4 text-white">
+									Kết nối Facebook
+								</button>
+							) : (
+								<button onClick={testMetaConfig} disabled={metaTesting} className="h-10 rounded-full border px-4">{metaTesting ? "Đang kiểm tra..." : "Kiểm tra"}</button>
+							)}
+							<button onClick={() => setShowMetaForm(false)} className="h-10 rounded-full border px-4">Huỷ</button>
+						</div>
+						<p className="text-xs text-sky-500">Sau khi lưu cấu hình hợp lệ, nút kết nối Facebook sẽ xuất hiện ở đây.</p>
 					</div>
 				</section>
 			)}

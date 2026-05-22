@@ -38,13 +38,20 @@ public class SocialAccountController {
     private final ScheduledPostRepository scheduledPostRepository;
 
     @GetMapping("/connect/{platform}")
-    public ResponseEntity<ApiResponse<String>> getConnectUrl(@PathVariable Platform platform, Authentication authentication) {
+    public ResponseEntity<ApiResponse<String>> getConnectUrl(@PathVariable String platform, Authentication authentication) {
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Unauthenticated"));
         }
         try {
             String username = authentication.getName();
-            String url = socialAccountService.generateAuthUrl(platform, username);
+            java.util.Locale l = java.util.Locale.ROOT;
+            Platform p;
+            try {
+                p = Platform.valueOf(platform.toUpperCase(l));
+            } catch (IllegalArgumentException ex) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Unsupported platform: " + platform));
+            }
+            String url = socialAccountService.generateAuthUrl(p, username);
             return ResponseEntity.ok(ApiResponse.ok(url));
         } catch (Exception ex) {
             String msg = ex.getMessage() != null ? ex.getMessage() : "Failed to generate connect URL";

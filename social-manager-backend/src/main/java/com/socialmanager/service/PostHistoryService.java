@@ -42,6 +42,8 @@ public class PostHistoryService {
         PostHistory history = PostHistory.builder()
             .user(user)
             .socialAccount(socialAccount)
+            .socialAccountIdSnapshot(socialAccount.getId())
+            .socialAccountNameSnapshot(socialAccount.getAccountName())
             .platform(socialAccount.getPlatform())
             .externalPostId(externalPostId)
             .content(content)

@@ -96,6 +96,12 @@ public class GlobalExceptionHandler {
             .body(ApiResponse.error("Lỗi khi giao tiếp với bên thứ 3: " + ex.getMessage()));
     }
 
+    @ExceptionHandler(FacebookTokenReconnectException.class)
+    public ResponseEntity<ApiResponse<Void>> handleFacebookTokenReconnect(FacebookTokenReconnectException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            .body(ApiResponse.error(ex.getMessage()));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleAll(Exception ex) {
         // QUAN TRỌNG: Thêm dòng này để nhìn thấy lỗi thật trong VS Code Terminal

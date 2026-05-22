@@ -27,8 +27,14 @@ public class PostHistory {
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "social_account_id", nullable = false)
+    @JoinColumn(name = "social_account_id", nullable = true)
     private SocialAccount socialAccount;
+
+    @Column(name = "social_account_id_snapshot", nullable = false)
+    private UUID socialAccountIdSnapshot;
+
+    @Column(name = "social_account_name_snapshot", nullable = false)
+    private String socialAccountNameSnapshot;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

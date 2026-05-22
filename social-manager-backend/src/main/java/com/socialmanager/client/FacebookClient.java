@@ -28,20 +28,34 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class FacebookClient {
     private final RestTemplate restTemplate;
+    private final com.socialmanager.service.ConfigService configService;
 
-    @Value("${FACEBOOK_CLIENT_ID:}")
+    @Value("${FACEBOOK_CLIENT_ID:${META_APP_ID:}}")
     private String facebookClientId;
 
-    @Value("${FACEBOOK_CLIENT_SECRET:}")
+    @Value("${FACEBOOK_CLIENT_SECRET:${META_APP_SECRET:}}")
     private String facebookClientSecret;
 
-    @Value("${FACEBOOK_REDIRECT_URI:${FACEBOOK_REDIRECT_URL:}}")
+    @Value("${FACEBOOK_REDIRECT_URI:${FACEBOOK_REDIRECT_URL:${META_REDIRECT_URI:}}}")
     private String facebookRedirectUri;
 
-    private void assertConfigured(String action) {
-        if (isBlank(facebookClientId) || isBlank(facebookClientSecret) || isBlank(facebookRedirectUri)) {
+    private void assertAuthUrlConfigured() {
+        String id = getEffectiveClientId();
+        String redirect = getEffectiveRedirectUri();
+        if (isBlank(id) || isBlank(redirect)) {
             throw new ExternalApiCallException(
-                "Thiếu cấu hình Facebook. Cần FACEBOOK_CLIENT_ID, FACEBOOK_CLIENT_SECRET, FACEBOOK_REDIRECT_URI để " + action
+                "Thiếu cấu hình Facebook. Cần FACEBOOK_CLIENT_ID và FACEBOOK_REDIRECT_URI để tạo link đăng nhập"
+            );
+        }
+    }
+
+    private void assertTokenExchangeConfigured() {
+        String id = getEffectiveClientId();
+        String secret = getEffectiveClientSecret();
+        String redirect = getEffectiveRedirectUri();
+        if (isBlank(id) || isBlank(secret) || isBlank(redirect)) {
+            throw new ExternalApiCallException(
+                "Thiếu cấu hình Facebook. Cần FACEBOOK_CLIENT_ID, FACEBOOK_CLIENT_SECRET, FACEBOOK_REDIRECT_URI để trao đổi token"
             );
         }
     }
@@ -51,7 +65,9 @@ public class FacebookClient {
     }
 
     public String getAuthUrl(String stateJwt) {
-        assertConfigured("tạo link đăng nhập");
+        assertAuthUrlConfigured();
+        String id = getEffectiveClientId();
+        String redirect = getEffectiveRedirectUri();
         return String.format(
             "https://www.facebook.com/v25.0/dialog/oauth" +
                 "?client_id=%s" +
@@ -59,8 +75,8 @@ public class FacebookClient {
                 "&response_type=code" +
                 "&scope=pages_manage_posts,pages_read_engagement" +
                 "&state=%s",
-            facebookClientId,
-            URLEncoder.encode(facebookRedirectUri, StandardCharsets.UTF_8),
+            id,
+            URLEncoder.encode(redirect, StandardCharsets.UTF_8),
             stateJwt
         );
     }
@@ -71,20 +87,26 @@ public class FacebookClient {
         }
         String shortToken = shortRes.accessToken();
 
+        String id = getEffectiveClientId();
+        String secret = getEffectiveClientSecret();
         return "https://graph.facebook.com/v25.0/oauth/access_token" +
             "?grant_type=fb_exchange_token" +
-            "&client_id=" + facebookClientId +
-            "&client_secret=" + facebookClientSecret +
+            "&client_id=" + id +
+            "&client_secret=" + secret +
             "&fb_exchange_token=" + shortToken;
     }
 
     public TokenResponse exchangeCodeForFacebookLongToken(String code) {
-        assertConfigured("trao đổi code lấy token");
+        assertTokenExchangeConfigured();
         try {
+            String id = getEffectiveClientId();
+            String secret = getEffectiveClientSecret();
+            String redirect = getEffectiveRedirectUri();
+
             String shortTokenUrl = "https://graph.facebook.com/oauth/access_token" +
-                "?client_id=" + facebookClientId +
-                "&client_secret=" + facebookClientSecret +
-                "&redirect_uri=" + facebookRedirectUri +
+                "?client_id=" + id +
+                "&client_secret=" + secret +
+                "&redirect_uri=" + redirect +
                 "&code=" + code;
 
             TokenResponse shortRes = restTemplate.getForObject(shortTokenUrl, TokenResponse.class);
@@ -110,6 +132,25 @@ public class FacebookClient {
         } catch (HttpClientErrorException e) {
             throw new ExternalApiCallException("Lỗi khi lấy danh sách Page: " + e.getResponseBodyAsString());
         }
+    }
+
+    // Helpers to read stored config via ConfigService falling back to env values
+    private String getEffectiveClientId() {
+        var fromStore = configService.getMetaAppId();
+        if (fromStore.isPresent() && !isBlank(fromStore.get())) return fromStore.get();
+        return facebookClientId;
+    }
+
+    private String getEffectiveRedirectUri() {
+        var fromStore = configService.getMetaRedirectUri();
+        if (fromStore.isPresent() && !isBlank(fromStore.get())) return fromStore.get();
+        return facebookRedirectUri;
+    }
+
+    private String getEffectiveClientSecret() {
+        var fromStore = configService.getMetaAppSecretDecrypted();
+        if (fromStore.isPresent() && !isBlank(fromStore.get())) return fromStore.get();
+        return facebookClientSecret;
     }
 
     // ==================== POSTING METHODS ====================

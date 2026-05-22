@@ -38,9 +38,11 @@ public class SocialAccountService {
 
     private final JwtUtil jwtUtil;
     private final ScheduledPostRepository scheduledPostRepository;
+    private final PostHistoryRepository postHistoryRepository;
+    private final AutoPilotConfigRepository autoPilotConfigRepository;
+    private final AccountDailyInsightRepository accountDailyInsightRepository;
 
-    @Value("${app.aes-secret:}")
-    private String aesSecret;
+    private final com.socialmanager.config.AesSecretProvider aesSecretProvider;
 
     /**
      * Helper method to find user by email or username
@@ -53,7 +55,8 @@ public class SocialAccountService {
     }
 
     private void assertAesSecretConfigured() {
-        if (aesSecret == null || aesSecret.trim().isEmpty()) {
+        String s = aesSecretProvider.getSecret();
+        if (s == null || s.trim().isEmpty()) {
             throw new IllegalStateException("Thiếu cấu hình app.aes-secret (AES_SECRET)");
         }
     }
@@ -148,8 +151,9 @@ public class SocialAccountService {
         account.setAccountName(name);
         account.setAccountAlias(alias);
         account.setProfilePictureUrl(pictureUrl);
-        account.setAccessToken(EncryptionUtil.encrypt(accessToken, aesSecret));
-        account.setRefreshToken(refreshToken != null ? EncryptionUtil.encrypt(refreshToken, aesSecret) : null);
+        String secret = aesSecretProvider.getSecret();
+        account.setAccessToken(EncryptionUtil.encrypt(accessToken, secret));
+        account.setRefreshToken(refreshToken != null ? EncryptionUtil.encrypt(refreshToken, secret) : null);
 
         if (expiresInSeconds != null) {
             account.setExpiresAt(LocalDateTime.now().plusSeconds(expiresInSeconds));
@@ -224,15 +228,15 @@ public class SocialAccountService {
         try {
             switch (account.getPlatform()) {
                 case INSTAGRAM -> {
-                    String currentAccessToken = EncryptionUtil.decrypt(account.getAccessToken(), aesSecret);
+                    String currentAccessToken = EncryptionUtil.decrypt(account.getAccessToken(), aesSecretProvider.getSecret());
                     newTokens = instagramClient.refreshAccessToken(currentAccessToken);
                 }
                 case THREADS -> {
-                    String currentAccessToken = EncryptionUtil.decrypt(account.getAccessToken(), aesSecret);
+                    String currentAccessToken = EncryptionUtil.decrypt(account.getAccessToken(), aesSecretProvider.getSecret());
                     newTokens = threadsClient.refreshAccessToken(currentAccessToken);
                 }
                 case TIKTOK -> {
-                    String currentRefreshToken = EncryptionUtil.decrypt(account.getRefreshToken(), aesSecret);
+                    String currentRefreshToken = EncryptionUtil.decrypt(account.getRefreshToken(), aesSecretProvider.getSecret());
                     newTokens = tikTokClient.refreshAccessToken(currentRefreshToken);
                 }
                 case FACEBOOK -> {
@@ -244,9 +248,9 @@ public class SocialAccountService {
                 throw new RuntimeException("Không thể làm mới token từ nền tảng");
             }
 
-            account.setAccessToken(EncryptionUtil.encrypt(newTokens.accessToken(), aesSecret));
+            account.setAccessToken(EncryptionUtil.encrypt(newTokens.accessToken(), aesSecretProvider.getSecret()));
             if (newTokens.refreshToken() != null) {
-                account.setRefreshToken(EncryptionUtil.encrypt(newTokens.refreshToken(), aesSecret));
+                account.setRefreshToken(EncryptionUtil.encrypt(newTokens.refreshToken(), aesSecretProvider.getSecret()));
             }
             if (newTokens.expiresIn() != null) {
                 account.setExpiresAt(LocalDateTime.now().plusSeconds(newTokens.expiresIn()));
@@ -278,7 +282,7 @@ public class SocialAccountService {
         }
 
         try {
-            String pageAccessToken = EncryptionUtil.decrypt(account.getAccessToken(), aesSecret);
+            String pageAccessToken = EncryptionUtil.decrypt(account.getAccessToken(), aesSecretProvider.getSecret());
             String pageId = account.getExternalAccountId();
 
             String publishedId;
@@ -337,6 +341,7 @@ public class SocialAccountService {
         return accounts.stream().map(this::mapToDto).toList();
     }
 
+    @Transactional
     public void deleteSocialAccountById(UUID id, String username) {
         User user = findUserByIdentifier(username);
 
@@ -346,6 +351,9 @@ public class SocialAccountService {
             throw new AccessDeniedException("Bạn không có quyền xóa tài khoản mạng xã hội này");
         }
 
+        scheduledPostRepository.deleteBySocialAccount_Id(account.getId());
+        autoPilotConfigRepository.deleteBySocialAccount_Id(account.getId());
+        accountDailyInsightRepository.deleteBySocialAccount_Id(account.getId());
 
         socialAccountRepository.delete(account);
     }

@@ -40,4 +40,6 @@ public interface PostHistoryRepository extends JpaRepository<PostHistory, UUID> 
 
     // Count posts by user and created by
     long countByUserIdAndCreatedBy(UUID userId, PostCreatedBy createdBy);
+
+    void deleteBySocialAccount_Id(UUID socialAccountId);
 }

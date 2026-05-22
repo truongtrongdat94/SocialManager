@@ -18,4 +18,6 @@ public interface AutoPilotConfigRepository extends JpaRepository<AutoPilotConfig
 
     // lấy config theo user ID
     List<AutoPilotConfig> findByUserId(UUID userId);
+
+    void deleteBySocialAccount_Id(UUID socialAccountId);
 }

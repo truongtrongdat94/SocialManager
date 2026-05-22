@@ -26,4 +26,6 @@ public interface ScheduledPostRepository extends JpaRepository<ScheduledPost, UU
     List<ScheduledPost> findByStatusAndScheduledTimeLessThanEqual(String status, LocalDateTime scheduledTime);
 
     ScheduledPost findTopByStatusOrderByCreatedAtDesc(String status);
+
+    void deleteBySocialAccount_Id(UUID socialAccountId);
 }

@@ -6,6 +6,7 @@ import com.socialmanager.repository.SocialAccountRepository;
 import com.socialmanager.util.EncryptionUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import com.socialmanager.config.AesSecretProvider;
 import org.springframework.http.*;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -21,9 +22,7 @@ public class MetricTestController {
 
     private final SocialAccountRepository socialAccountRepository;
     private final RestTemplate restTemplate = new RestTemplate();
-    
-    @Value("${AES_SECRET}")
-    private String aesSecret;
+    private final AesSecretProvider aesSecretProvider;
 
     private static final List<String> POST_METRICS_TO_TEST = List.of(
         "post_impressions",
@@ -66,7 +65,7 @@ public class MetricTestController {
             }
 
             SocialAccount account = accounts.get(0);
-            String pageToken = EncryptionUtil.decrypt(account.getAccessToken(), aesSecret);
+            String pageToken = EncryptionUtil.decrypt(account.getAccessToken(), aesSecretProvider.getSecret());
 
             // Test từng metric
             for (String metric : POST_METRICS_TO_TEST) {

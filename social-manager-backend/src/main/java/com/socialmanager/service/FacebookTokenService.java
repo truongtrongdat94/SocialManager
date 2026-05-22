@@ -1,6 +1,7 @@
 package com.socialmanager.service;
 
 import com.socialmanager.exception.ResourceNotFoundException;
+import com.socialmanager.exception.FacebookTokenReconnectException;
 import com.socialmanager.exception.UnauthorizedException;
 import com.socialmanager.model.Platform;
 import com.socialmanager.model.SocialAccount;
@@ -9,7 +10,7 @@ import com.socialmanager.repository.SocialAccountRepository;
 import com.socialmanager.repository.UserRepository;
 import com.socialmanager.util.EncryptionUtil;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
+import com.socialmanager.config.AesSecretProvider;
 import org.springframework.stereotype.Service;
 
 /**
@@ -22,9 +23,7 @@ public class FacebookTokenService {
 
     private final SocialAccountRepository socialAccountRepository;
     private final UserRepository userRepository;
-
-    @Value("${AES_SECRET}")
-    private String aesSecret;
+    private final AesSecretProvider aesSecretProvider;
 
     /**
      * Lấy page token từ DB và decrypt
@@ -47,9 +46,9 @@ public class FacebookTokenService {
             .orElseThrow(() -> new UnauthorizedException("Bạn không có quyền truy cập Page này hoặc Page không tồn tại"));
 
         try {
-            return EncryptionUtil.decrypt(account.getAccessToken(), aesSecret);
+            return EncryptionUtil.decrypt(account.getAccessToken(), aesSecretProvider.getSecret());
         } catch (Exception e) {
-            throw new RuntimeException("Lỗi khi decrypt token. Vui lòng kết nối lại tài khoản Facebook.", e);
+            throw new FacebookTokenReconnectException("Token Facebook không còn hợp lệ. Vui lòng kết nối lại tài khoản Facebook.", e);
         }
     }
 }
