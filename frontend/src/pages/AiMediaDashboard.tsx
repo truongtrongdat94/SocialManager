@@ -28,6 +28,7 @@ export default function AiMediaDashboard() {
 
 	const [history, setHistory] = useState<ImageGeneration[]>([]);
 	const [loadingHistory, setLoadingHistory] = useState(false);
+	const [expandedCaptions, setExpandedCaptions] = useState<Record<string, boolean>>({});
 
 	const hashtags = useMemo(() => {
 		const tags = caption.match(/#[\p{L}\p{N}_]+/gu) ?? [];
@@ -67,12 +68,12 @@ export default function AiMediaDashboard() {
 			const generatedCaption = captionResponse.data?.data?.resultCaption ?? "";
 			setCaption(generatedCaption);
 
-			const imageResponse = await api.post<{ generationId?: string; message?: string }>(
+			const imageResponse = await api.post<ApiResponse<{ generationId?: string }>>(
 				"/api/ai/generate-image",
-				{ prompt: topic.trim() },
+				{ prompt: topic.trim(), caption: generatedCaption },
 			);
 
-			const newGenerationId = imageResponse.data?.generationId ?? "";
+			const newGenerationId = imageResponse.data?.data?.generationId ?? "";
 			setGenerationId(newGenerationId);
 
 			let resolvedImageUrl = "";
@@ -109,14 +110,58 @@ export default function AiMediaDashboard() {
 		}
 	};
 
-	const mediaUrls = useMemo(() => {
-		const urls: string[] = [];
-		history.forEach((item) => {
-			if (item.cloudinaryUrl) urls.push(item.cloudinaryUrl);
-			if (Array.isArray(item.cloudinaryUrls)) urls.push(...item.cloudinaryUrls.filter(Boolean));
+	const mediaItems = useMemo(() => {
+		const items: Array<{
+			key: string;
+			url: string;
+			caption: string;
+			prompt: string;
+			generationId: string;
+			createdAt: string;
+		}> = [];
+
+		history.forEach((item, index) => {
+			const effectiveCaption = (item.caption?.trim() || item.prompt?.trim() || "Chưa có caption").trim();
+			const prompt = item.prompt?.trim() || "";
+			const generationId = item.leonardoGenerationId ?? "";
+			const createdAt = item.createdAt ?? "";
+
+			if (item.cloudinaryUrl) {
+				items.push({
+					key: `${item.id}-single-${index}`,
+					url: item.cloudinaryUrl,
+					caption: effectiveCaption,
+					prompt,
+					generationId,
+					createdAt,
+				});
+			}
+
+			if (Array.isArray(item.cloudinaryUrls)) {
+				item.cloudinaryUrls
+					.filter(Boolean)
+					.forEach((url, urlIndex) => {
+						items.push({
+							key: `${item.id}-multi-${urlIndex}`,
+							url,
+							caption: effectiveCaption,
+							prompt,
+							generationId,
+							createdAt,
+						});
+					});
+			}
 		});
-		return Array.from(new Set(urls));
+
+		return items;
 	}, [history]);
+
+	const toggleCaption = (key: string) => {
+		setExpandedCaptions((prev) => ({
+			...prev,
+			[key]: !prev[key],
+		}));
+	};
 
 	const pushToPost = () => {
 		if (!caption || !imageUrl) {
@@ -171,11 +216,8 @@ export default function AiMediaDashboard() {
 
 			<div className="relative mb-6 flex items-start justify-between gap-4 rounded-[24px] border border-sky-100/80 bg-white/75 px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] backdrop-blur-sm">
 				<div>
-					<h1 className="text-3xl font-extrabold tracking-tight text-sky-700">Arctic AI Media Dashboard</h1>
-					<p className="mt-2 text-base text-sky-700/80">Tạo caption, tạo ảnh và chuyển nhanh sang trang đăng bài theo phong cách Bắc Cực.</p>
-				</div>
-				<div className="floaty hidden rounded-2xl border border-sky-200 bg-[#eef9ff] px-4 py-3 text-sm font-semibold text-sky-700 md:block">
-					🐻‍❄️ + 🐧 Arctic Mode
+					<h1 className="text-3xl font-extrabold tracking-tight text-sky-700">AI Media Dashboard</h1>
+					<p className="mt-2 text-base text-sky-700/80">Tạo caption, tạo ảnh và chuyển nhanh sang trang đăng bài.</p>
 				</div>
 			</div>
 
@@ -315,28 +357,50 @@ export default function AiMediaDashboard() {
 						</button>
 					</div>
 
-					{mediaUrls.length === 0 ? (
+					{mediaItems.length === 0 ? (
 						<div className="rounded-xl border border-dashed border-sky-200 bg-[#f8fdff] p-5 text-sm text-sky-500">
 							Chưa có ảnh trong lịch sử. 🐧
 						</div>
 					) : (
 						<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-							{mediaUrls.map((url) => (
-								<div key={url} className="overflow-hidden rounded-2xl border border-sky-200 bg-white">
-									<div className="aspect-square">
-										<img src={url} alt="Cloudinary item" className="h-full w-full object-cover" />
+							{mediaItems.map((item) => {
+								const isExpanded = !!expandedCaptions[item.key];
+								return (
+									<div key={item.key} className="overflow-hidden rounded-2xl border border-sky-200 bg-white">
+										<div className="aspect-square">
+											<img src={item.url} alt="Cloudinary item" className="h-full w-full object-cover" />
+										</div>
+										<div className="border-t border-sky-100 p-2.5">
+											<div className="mb-2 rounded-xl border border-sky-100 bg-[#f8fdff] p-2.5">
+												<p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-sky-500">Caption</p>
+												<p
+													className={`text-xs leading-5 text-sky-800 ${
+														isExpanded ? "" : "line-clamp-2"
+													}`}
+												>
+													{item.caption}
+												</p>
+												{item.caption.length > 80 && (
+													<button
+														type="button"
+														onClick={() => toggleCaption(item.key)}
+														className="mt-1 text-[11px] font-semibold text-sky-600 transition hover:text-sky-700"
+													>
+														{isExpanded ? "Thu gọn" : "Mở rộng"}
+													</button>
+												)}
+											</div>
+											<button
+												type="button"
+												onClick={() => copyUrl(item.url)}
+												className="h-10 w-full rounded-full border border-sky-200 text-xs font-semibold text-sky-700 transition hover:bg-sky-50"
+											>
+												Copy URL
+											</button>
+										</div>
 									</div>
-									<div className="border-t border-sky-100 p-2.5">
-										<button
-											type="button"
-											onClick={() => copyUrl(url)}
-											className="h-10 w-full rounded-full border border-sky-200 text-xs font-semibold text-sky-700 transition hover:bg-sky-50"
-										>
-											Copy URL
-										</button>
-									</div>
-								</div>
-							))}
+								);
+							})}
 						</div>
 					)}
 				</section>

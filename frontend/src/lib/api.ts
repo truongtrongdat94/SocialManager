@@ -8,7 +8,7 @@ export interface ApiResponse<T> {
 
 export interface AuthResponse {
 	accessToken: string;
-	refreshToken: string;
+	refreshToken?: string | null;
 }
 
 export interface UserDto {
@@ -52,6 +52,7 @@ export interface AiGenerationLog {
 export interface ImageGeneration {
 	id: string;
 	prompt: string;
+	caption?: string;
 	imageUrl?: string;
 	cloudinaryUrl?: string;
 	cloudinaryUrls?: string[];

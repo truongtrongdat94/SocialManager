@@ -3,7 +3,6 @@ import toast from "react-hot-toast";
 import { api } from "@/lib/api";
 import { usePageInsights } from "../../hooks/usePageInsights";
 import { ImpressionsChart } from "../../components/charts/ImpressionsChart";
-import { FansGrowthChart } from "../../components/charts/FansGrowthChart";
 import { EngagementChart } from "../../components/charts/EngagementChart";
 import { ReactionsChart } from "../../components/charts/ReactionsChart";
 import { PostPerformanceTable } from "../../components/charts/PostPerformanceTable";

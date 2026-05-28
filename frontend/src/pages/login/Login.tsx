@@ -39,9 +39,8 @@ export function Login() {
 		try {
 			setLoading(true);
 			const response = await api.post<ApiResponse<AuthResponse>>("/api/auth/login", form);
-			const { accessToken, refreshToken } = response.data.data;
+			const { accessToken } = response.data.data;
 			localStorage.setItem("accessToken", accessToken);
-			localStorage.setItem("refreshToken", refreshToken);
 			toast.success("Đăng nhập thành công");
 			navigate("/dashboard/ai");
 		} catch (error) {
@@ -60,7 +59,8 @@ export function Login() {
 		<div className="min-h-screen bg-[#d7f4ff] px-4 py-8 md:py-10">
 			<div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl items-center justify-center">
 				<div className="w-full max-w-[560px] rounded-xl border-2 border-sky-100 bg-white p-7 shadow-[0_14px_34px_rgba(22,130,178,0.22)] md:p-8">
-					<h1 className="mb-4 text-center text-[23px] font-extrabold tracking-wide text-sky-500">LOGIN</h1>
+					<h1 className="mb-1 text-center text-4xl font-extrabold tracking-tight text-sky-600 md:text-5xl">SocialManager</h1>
+					<p className="mb-4 text-center text-sm font-semibold tracking-wide text-sky-500">LOGIN</p>
 
 					<div className="mb-5 flex justify-center">
 						<div className="relative h-[230px] w-[230px] rounded-full border-[4px] border-sky-300 bg-[#ebf9ff]">

@@ -19,23 +19,27 @@ function ProtectedRoute() {
 }
 
 function DashboardLayout() {
-	const navItems = [
+	const navItems: Array<{ to: string; label: string }> = [
 		{ to: "/dashboard/ai", label: "AI Media" },
 		{ to: "/dashboard/post", label: "Đăng bài" },
 		{ to: "/dashboard/accounts", label: "Tài khoản" },
 		{ to: "/dashboard/stats", label: "Thống kê" },
-		{ to: "/dashboard/autopilot", label: "🤖 Auto Pilot" },
-		{ to: "/dashboard/history", label: "📜 Lịch sử" },
+		{ to: "/dashboard/autopilot", label: "Auto Pilot" },
+		{ to: "/dashboard/history", label: "Lịch sử" },
 	];
 
 	return (
-		<div className="min-h-screen bg-white text-zinc-900">
-			<div className="mx-auto flex max-w-[1400px] gap-6 p-4 md:p-8">
-				<aside className="w-full max-w-[280px] rounded-[24px] border border-zinc-100 bg-white p-4 md:p-6">
-					<div className="mb-6">
-						<h1 className="text-2xl font-semibold tracking-tight">SocialManager</h1>
-						<p className="mt-1 text-sm text-zinc-500">Meta Flat Workspace</p>
+		<div className="min-h-screen bg-gradient-to-br from-[#dff4ff] via-[#edf9ff] to-[#f7fdff] text-sky-950">
+			<div className="mx-auto flex max-w-[1500px] gap-6 p-4 md:p-8">
+				<aside className="w-full max-w-[300px] rounded-[30px] border border-sky-100/80 bg-white/80 p-5 shadow-[0_14px_36px_rgba(56,146,183,0.18)] backdrop-blur-sm md:p-6">
+					<div className="mb-6 rounded-2xl border border-sky-100 bg-gradient-to-br from-white to-[#f1f9ff] p-4">
+						<h1 className="text-2xl font-extrabold tracking-tight text-sky-700">SocialManager</h1>
+						<p className="mt-1 text-sm text-sky-600/80">Creator Workspace</p>
+						<span className="mt-3 inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
+							● Online
+						</span>
 					</div>
+
 					<nav className="flex flex-col gap-2">
 						{navItems.map((item) => (
 							<NavLink
@@ -43,33 +47,38 @@ function DashboardLayout() {
 								to={item.to}
 								className={({ isActive }) =>
 									[
-										"rounded-full border px-4 py-2.5 text-sm font-semibold transition",
+										"group flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-semibold transition-all",
 										isActive
-											? "border-zinc-900 bg-zinc-900 text-white"
-											: "border-zinc-100 bg-white text-zinc-700",
+											? "border-sky-500 bg-sky-500 text-white shadow-[0_10px_22px_rgba(14,165,233,0.35)]"
+											: "border-sky-100 bg-white/90 text-sky-700 hover:border-sky-300 hover:bg-sky-50",
 									].join(" ")
 								}
 							>
-								{item.label}
+								<span>{item.label}</span>
 							</NavLink>
 						))}
-						<button
-							type="button"
-							onClick={() => {
-								localStorage.removeItem("accessToken");
-								localStorage.removeItem("refreshToken");
-								window.location.href = "/login";
-							}}
-							className="mt-4 rounded-full border border-zinc-100 px-4 py-2.5 text-left text-sm font-semibold text-zinc-700"
-						>
-							Đăng xuất
-						</button>
+
+						<div className="mt-2 border-t border-sky-100 pt-3">
+							<button
+								type="button"
+								onClick={() => {
+									localStorage.removeItem("accessToken");
+									localStorage.removeItem("refreshToken");
+									window.location.href = "/login";
+								}}
+								className="w-full rounded-2xl border border-sky-200 bg-white px-4 py-3 text-left text-sm font-semibold text-sky-700 transition hover:border-sky-300 hover:bg-sky-50"
+							>
+								Đăng xuất
+							</button>
+						</div>
 					</nav>
 				</aside>
 
-				<main className="min-w-0 flex-1 rounded-[24px] border border-zinc-100 bg-white p-4 md:p-8">
-					<Outlet />
-				</main>
+				<div className="min-w-0 flex-1">
+					<main className="rounded-[28px] border border-sky-100/80 bg-white/90 p-4 shadow-[0_14px_32px_rgba(56,146,183,0.12)] md:p-7">
+						<Outlet />
+					</main>
+				</div>
 			</div>
 		</div>
 	);

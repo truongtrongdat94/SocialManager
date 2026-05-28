@@ -1,17 +1,19 @@
 package com.socialmanager.scheduler;
 
+import java.util.List;
+
+import org.springframework.scheduling.annotation.Scheduled;
+
 import com.socialmanager.model.ImageGeneration;
 import com.socialmanager.repository.ImageGenerationRepository;
 import com.socialmanager.service.CloudinaryService;
 import com.socialmanager.service.ImageGenService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Component;
 
-import java.util.List;
-
-@Component
+@Deprecated
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.scheduler.legacy-image-check-enabled", havingValue = "true")
 @RequiredArgsConstructor
 @Slf4j
 public class ImageCheckScheduler {

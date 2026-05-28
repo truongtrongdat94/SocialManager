@@ -1,25 +1,33 @@
 package com.socialmanager.controller;
 
-import com.socialmanager.dto.ApiResponse;
-import com.socialmanager.dto.external.FacebookInsight;
-import com.socialmanager.service.InsightsService;
-import jakarta.validation.constraints.Pattern;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
-
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.socialmanager.dto.ApiResponse;
+import com.socialmanager.dto.external.FacebookInsight;
+import com.socialmanager.service.InsightsService;
+
+import jakarta.validation.constraints.Pattern;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 @RestController
 @RequestMapping("/api/analytics")
 @RequiredArgsConstructor
 @Validated
+@Slf4j
 public class AnalyticsController {
 
     private final InsightsService insightsService;
@@ -128,16 +136,16 @@ public class AnalyticsController {
         @RequestParam String pageId
     ) {
         String username = getCurrentUsername();
-        System.out.println("DEBUG: Getting post insights for postId=" + postId + ", pageId=" + pageId + ", user=" + username);
-        
+        log.debug("Getting post insights for postId={}, pageId={}, user={}", postId, pageId, username);
+
         List<FacebookInsight> insights = insightsService.getPostInsights(
-            username, 
-            postId, 
+            username,
+            postId,
             pageId
         );
-        
-        System.out.println("DEBUG: Retrieved " + (insights != null ? insights.size() : 0) + " insights for post " + postId);
-        
+
+        log.debug("Retrieved {} insights for post {}", insights != null ? insights.size() : 0, postId);
+
         return ResponseEntity.ok(new ApiResponse<>(true, "Lấy Post insights thành công", insights));
     }
 }

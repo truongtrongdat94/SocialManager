@@ -4,7 +4,7 @@ spring:
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:postgres123}
   jpa:
-    show-sql: true
+    show-sql: false
     open-in-view: false
     hibernate:
       ddl-auto: update
@@ -21,3 +21,12 @@ spring:
           google:
             client-id: ${GOOGLE_CLIENT_ID}
             client-secret: ${GOOGLE_CLIENT_SECRET}
+
+app:
+  leonardo:
+    webhook-enabled: false
+    webhook-url: ""
+  ai-image:
+    worker-delay-ms: ${AI_IMAGE_WORKER_DELAY_MS:5000}
+  scheduler:
+    legacy-image-check-enabled: ${LEGACY_IMAGE_CHECK_ENABLED:false}

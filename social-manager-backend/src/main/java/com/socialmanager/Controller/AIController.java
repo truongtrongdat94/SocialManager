@@ -1,13 +1,12 @@
 package com.socialmanager.controller;
 
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping; // Import thêm cái này
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -15,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.socialmanager.dto.ApiResponse;
 import com.socialmanager.dto.request.CaptionRequest;
 import com.socialmanager.model.AiGenerationLog;
-import com.socialmanager.model.ImageGeneration; // Import Security
+import com.socialmanager.model.ImageGeneration;
 import com.socialmanager.model.User;
 import com.socialmanager.repository.UserRepository;
 import com.socialmanager.service.GeminiAIService;
@@ -23,7 +22,6 @@ import com.socialmanager.service.ImageGenService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 @RestController
 @RequestMapping("/api/ai")
@@ -32,7 +30,7 @@ public class AIController {
 
     private final GeminiAIService geminiAIService;
     private final ImageGenService imageGenService;
-    private final UserRepository userRepository; // Inject thêm UserRepository để tìm DB
+    private final UserRepository userRepository;
 
     /**
      * Hàm dùng chung để bắt thông tin User đang gọi API từ JWT Token
@@ -61,32 +59,28 @@ public class AIController {
     }
 
     @GetMapping("/history")
-    public ResponseEntity<?> getHistory(@AuthenticationPrincipal UserDetails userDetails) {
-        // 1. Tìm thực thể User đầy đủ từ email hoặc username trong Token
-        String identifier = userDetails.getUsername(); // Có thể là email hoặc username
-        User currentUser = userRepository.findByEmail(identifier)
-                .or(() -> userRepository.findByUsername(identifier))
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        // 2. Gọi hàm Service mới để lấy đúng đồ của mình
+    public ResponseEntity<?> getHistory() {
+        User currentUser = getCurrentAuthenticatedUser();
         List<ImageGeneration> history = geminiAIService.getHistoryForUser(currentUser);
 
         return ResponseEntity.ok(Map.of(
-          "success", true,
-          "data", history
-    ));
-}
+            "success", true,
+            "data", history
+        ));
+    }
 
     @PostMapping("/generate-image")
     public ResponseEntity<ApiResponse<Map<String, String>>> generateImage(@RequestBody Map<String, String> request) {
         String prompt = request.get("prompt");
+        String caption = request.get("caption");
         
         try {
-            // 1. Lấy User xịn từ Token
-            User currentUser = getCurrentAuthenticatedUser(); 
-        
-            // 2. Thay chữ 'null' bằng currentUser
+            User currentUser = getCurrentAuthenticatedUser();
             ImageGeneration imgGen = imageGenService.startImageGeneration(prompt, currentUser);
+
+            if (caption != null && !caption.isBlank()) {
+                imgGen.setCaption(caption);
+            }
         
             return ResponseEntity.ok(new ApiResponse<>(
                 true,
@@ -96,7 +90,7 @@ public class AIController {
         } catch (Exception e) {
             return ResponseEntity.status(500).body(new ApiResponse<>(
                 false,
-                e.getMessage(),
+                "Không thể tạo ảnh AI vào lúc này",
                 null
             ));
         }
