@@ -3,8 +3,8 @@ import toast from "react-hot-toast";
 import { api } from "@/lib/api";
 import { usePageInsights } from "../../hooks/usePageInsights";
 import { ImpressionsChart } from "../../components/charts/ImpressionsChart";
-import { EngagementChart } from "../../components/charts/EngagementChart";
-import { ReactionsChart } from "../../components/charts/ReactionsChart";
+// import { EngagementChart } from "../../components/charts/EngagementChart";
+// import { ReactionsChart } from "../../components/charts/ReactionsChart";
 import { PostPerformanceTable } from "../../components/charts/PostPerformanceTable";
 
 type SocialAccount = {
@@ -67,22 +67,22 @@ export function Stats() {
 		return transformInsightsToChartData(impressionsData.data);
 	}, [impressionsData.data]);
 
-	const engagementChartData = useMemo(() => {
-		if (!engagementData.data) return [];
-		return transformInsightsToChartData(engagementData.data);
-	}, [engagementData.data]);
-
-	const reactionsChartData = useMemo(() => {
-		if (!reactionsData.data) return [];
-		// Tổng hợp reactions từ tất cả các ngày
-		const totals: Record<string, number> = {};
-		reactionsData.data.forEach((insight: any) => {
-			const type = insight.name.replace('page_actions_post_reactions_', '').replace('_total', '');
-			const total = insight.values.reduce((sum: number, v: any) => sum + (typeof v.value === 'number' ? v.value : 0), 0);
-			totals[type] = total;
-		});
-		return Object.entries(totals).map(([type, value]) => ({ type, value }));
-	}, [reactionsData.data]);
+	// const engagementChartData = useMemo(() => {
+	// 	if (!engagementData.data) return [];
+	// 	return transformInsightsToChartData(engagementData.data);
+	// }, [engagementData.data]);
+	//
+	// const reactionsChartData = useMemo(() => {
+	// 	if (!reactionsData.data) return [];
+	// 	// Tổng hợp reactions từ tất cả các ngày
+	// 	const totals: Record<string, number> = {};
+	// 	reactionsData.data.forEach((insight: any) => {
+	// 		const type = insight.name.replace('page_actions_post_reactions_', '').replace('_total', '');
+	// 		const total = insight.values.reduce((sum: number, v: any) => sum + (typeof v.value === 'number' ? v.value : 0), 0);
+	// 		totals[type] = total;
+	// 	});
+	// 	return Object.entries(totals).map(([type, value]) => ({ type, value }));
+	// }, [reactionsData.data]);
 
 	// Helper function để transform insights thành chart data
 	function transformInsightsToChartData(insights: any[]): any[] {
@@ -302,7 +302,7 @@ export function Stats() {
 					{/* Biểu đồ 1: Reach & Impressions */}
 					<div className="rounded-[28px] border border-sky-100 bg-white/90 p-6 shadow-[0_8px_24px_rgba(64,164,202,0.14)]">
 						<h2 className="mb-4 text-xl font-bold text-sky-800">1. Reach & Impressions theo thời gian</h2>
-						<p className="mb-3 text-sm text-sky-600">⚠️ Metric page_impressions đã deprecated, chỉ hiển thị 3 metrics còn lại</p>
+						{/*<p className="mb-3 text-sm text-sky-600">⚠️ Metric page_impressions đã deprecated, chỉ hiển thị 3 metrics còn lại</p>*/}
 						{impressionsChartData.length > 0 ? (
 							<ImpressionsChart data={impressionsChartData} />
 						) : (
@@ -311,29 +311,29 @@ export function Stats() {
 					</div>
 
 					{/* Biểu đồ 3: Engagement */}
-					<div className="rounded-[28px] border border-sky-100 bg-white/90 p-6 shadow-[0_8px_24px_rgba(64,164,202,0.14)]">
-						<h2 className="mb-4 text-xl font-bold text-sky-800">2. Engagement tổng hợp</h2>
-						<p className="mb-3 text-sm text-sky-600">⚠️ Metric page_consumptions_unique đã deprecated</p>
-						{engagementChartData.length > 0 ? (
-							<EngagementChart data={engagementChartData} />
-						) : (
-							<p className="text-sm text-sky-600">Chưa có dữ liệu</p>
-						)}
-					</div>
+					{/*<div className="rounded-[28px] border border-sky-100 bg-white/90 p-6 shadow-[0_8px_24px_rgba(64,164,202,0.14)]">*/}
+					{/*	<h2 className="mb-4 text-xl font-bold text-sky-800">2. Engagement tổng hợp</h2>*/}
+					{/*	<p className="mb-3 text-sm text-sky-600">⚠️ Metric page_consumptions_unique đã deprecated</p>*/}
+					{/*	{engagementChartData.length > 0 ? (*/}
+					{/*		<EngagementChart data={engagementChartData} />*/}
+					{/*	) : (*/}
+					{/*		<p className="text-sm text-sky-600">Chưa có dữ liệu</p>*/}
+					{/*	)}*/}
+					{/*</div>*/}
 
 					{/* Biểu đồ 4: Reactions */}
-					<div className="rounded-[28px] border border-sky-100 bg-white/90 p-6 shadow-[0_8px_24px_rgba(64,164,202,0.14)]">
-						<h2 className="mb-4 text-xl font-bold text-sky-800">3. Phân tích Reactions</h2>
-						{reactionsChartData.length > 0 ? (
-							<ReactionsChart data={reactionsChartData} />
-						) : (
-							<p className="text-sm text-sky-600">Chưa có dữ liệu</p>
-						)}
-					</div>
+					{/*<div className="rounded-[28px] border border-sky-100 bg-white/90 p-6 shadow-[0_8px_24px_rgba(64,164,202,0.14)]">*/}
+					{/*	<h2 className="mb-4 text-xl font-bold text-sky-800">3. Phân tích Reactions</h2>*/}
+					{/*	{reactionsChartData.length > 0 ? (*/}
+					{/*		<ReactionsChart data={reactionsChartData} />*/}
+					{/*	) : (*/}
+					{/*		<p className="text-sm text-sky-600">Chưa có dữ liệu</p>*/}
+					{/*	)}*/}
+					{/*</div>*/}
 
 					{/* Biểu đồ 5: Hiệu suất bài viết */}
 					<div className="rounded-[28px] border border-sky-100 bg-white/90 p-6 shadow-[0_8px_24px_rgba(64,164,202,0.14)]">
-						<h2 className="mb-4 text-xl font-bold text-sky-800">4. Hiệu suất từng bài viết</h2>
+						<h2 className="mb-4 text-xl font-bold text-sky-800">2. Hiệu suất từng bài viết</h2>
 						{loadingPosts ? (
 							<p className="text-sm text-sky-600">Đang tải bài viết...</p>
 						) : posts.length > 0 ? (
