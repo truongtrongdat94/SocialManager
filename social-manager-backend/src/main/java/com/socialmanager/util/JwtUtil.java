@@ -17,17 +17,37 @@ public class JwtUtil {
     @Value("${app.jwt.expiration}")
     private long jwtExpirationMs;
 
+    @Value("${app.jwt.refresh-expiration:604800000}") // 7 days default
+    private long refreshExpirationMs;
+
     private Key getSigningKey() {
         return Keys.hmacShaKeyFor(secretKey.getBytes());
     }
 
     public String generateToken(String username) {
+        long now = System.currentTimeMillis();
         return Jwts.builder()
                 .subject(username)
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
+                .claim("type", "access")
+                .issuedAt(new Date(now))
+                .expiration(new Date(now + jwtExpirationMs))
                 .signWith(getSigningKey())
                 .compact();
+    }
+
+    public String generateRefreshToken(String username) {
+        long now = System.currentTimeMillis();
+        return Jwts.builder()
+                .subject(username)
+                .claim("type", "refresh")
+                .issuedAt(new Date(now))
+                .expiration(new Date(now + refreshExpirationMs))
+                .signWith(getSigningKey())
+                .compact();
+    }
+
+    public long getRefreshExpirationMs() {
+        return refreshExpirationMs;
     }
 
     public String getUsernameFromToken(String token) {

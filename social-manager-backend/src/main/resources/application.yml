@@ -20,6 +20,11 @@ spring:
     job-store-type: jdbc
     jdbc:
       initialize-schema: always
+    properties:
+      org:
+        quartz:
+          jobStore:
+            driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
 
 app:
   jwt:
@@ -27,13 +32,15 @@ app:
     expiration: ${JWT_EXPIRATION:86400000}
   aes-secret: ${AES_SECRET:dev-aes-key-32-bytes-1234567890}
   gemini:
-    api-key: ${GEMINI_API_KEY:}
+    api-key: ${GEMINI_API_KEY}
+    url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent"  
   leonardo:
-    api-key: ${LEONARDO_API_KEY:}
+    api-key: ${LEONARDO_API_KEY}
+    url: "https://cloud.leonardo.ai/api/rest/v1/generations"   
   cloudinary:
-    cloud-name: ${CLOUDINARY_CLOUD_NAME:}
-    api-key: ${CLOUDINARY_API_KEY:}
-    api-secret: ${CLOUDINARY_API_SECRET:}
+    cloud-name: ${CLOUDINARY_CLOUD_NAME}
+    api-key: ${CLOUDINARY_API_KEY}
+    api-secret: ${CLOUDINARY_API_SECRET}
   meta:
     app-id: ${META_APP_ID:}
     app-secret: ${META_APP_SECRET:}
@@ -45,6 +52,11 @@ app:
 
 server:
   port: 8080
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+      enabled: true
 
 springdoc:
   swagger-ui:
