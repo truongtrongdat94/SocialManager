@@ -59,11 +59,11 @@ public class SecurityConfig {
             .exceptionHandling(exception -> exception
                 .authenticationEntryPoint(jwtAuthenticationEntryPoint)
             )
-            // .oauth2Login(oauth2 -> oauth2
-            //     .userInfoEndpoint(userInfo ->
-            //         userInfo.oidcUserService(customOAuth2UserService))
-            //     .successHandler(oAuth2SuccessHandler)
-            // )
+            .oauth2Login(oauth2 -> oauth2
+                .userInfoEndpoint(userInfo ->
+                    userInfo.oidcUserService(customOAuth2UserService))
+                .successHandler(oAuth2SuccessHandler)
+            )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
