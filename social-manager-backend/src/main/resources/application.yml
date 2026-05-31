@@ -20,6 +20,38 @@ spring:
     job-store-type: jdbc
     jdbc:
       initialize-schema: always
+    properties:
+      org:
+        quartz:
+          jobStore:
+            driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
+  security:
+    oauth2:
+      client:
+        registration:
+          meta:
+            client-id: ${META_APP_ID:}
+            client-secret: ${META_APP_SECRET:}
+            redirect-uri: ${META_REDIRECT_URI:http://localhost:8080/api/auth/callback/meta}
+            scope: email,profile
+            authorization-grant-type: authorization_code
+          tiktok:
+            client-id: ${TIKTOK_CLIENT_KEY:}
+            client-secret: ${TIKTOK_CLIENT_SECRET:}
+            redirect-uri: ${TIKTOK_REDIRECT_URI:http://localhost:8080/api/auth/callback/tiktok}
+            scope: user.info.basic
+            authorization-grant-type: authorization_code
+        provider:
+          meta:
+            authorization-uri: https://www.facebook.com/v18.0/dialog/oauth
+            token-uri: https://graph.instagram.com/v18.0/oauth/access_token
+            user-info-uri: https://graph.instagram.com/me
+            user-name-attribute: id
+          tiktok:
+            authorization-uri: https://www.tiktok.com/v1/oauth/authorize
+            token-uri: https://open.tiktokapis.com/v1/oauth/token
+            user-info-uri: https://open.tiktokapis.com/v1/user/info
+            user-name-attribute: data.user.id
 
 app:
   jwt:
@@ -27,9 +59,11 @@ app:
     expiration: ${JWT_EXPIRATION:86400000}
   aes-secret: ${AES_SECRET:dev-aes-key-32-bytes-1234567890}
   gemini:
-    api-key: ${GEMINI_API_KEY:}
+    api-key: ${GEMINI_API_KEY}
+    url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent"  
   leonardo:
-    api-key: ${LEONARDO_API_KEY:}
+    api-key: ${LEONARDO_API_KEY}
+    url: "https://cloud.leonardo.ai/api/rest/v1/generations"   
   cloudinary:
     cloud-name: ${CLOUDINARY_CLOUD_NAME:}
     api-key: ${CLOUDINARY_API_KEY:}
@@ -37,6 +71,11 @@ app:
 
 server:
   port: 8080
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+      enabled: true
 
 springdoc:
   swagger-ui:
