@@ -25,33 +25,6 @@ spring:
         quartz:
           jobStore:
             driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
-  security:
-    oauth2:
-      client:
-        registration:
-          meta:
-            client-id: ${META_APP_ID:}
-            client-secret: ${META_APP_SECRET:}
-            redirect-uri: ${META_REDIRECT_URI:http://localhost:8080/api/auth/callback/meta}
-            scope: email,profile
-            authorization-grant-type: authorization_code
-          tiktok:
-            client-id: ${TIKTOK_CLIENT_KEY:}
-            client-secret: ${TIKTOK_CLIENT_SECRET:}
-            redirect-uri: ${TIKTOK_REDIRECT_URI:http://localhost:8080/api/auth/callback/tiktok}
-            scope: user.info.basic
-            authorization-grant-type: authorization_code
-        provider:
-          meta:
-            authorization-uri: https://www.facebook.com/v18.0/dialog/oauth
-            token-uri: https://graph.instagram.com/v18.0/oauth/access_token
-            user-info-uri: https://graph.instagram.com/me
-            user-name-attribute: id
-          tiktok:
-            authorization-uri: https://www.tiktok.com/v1/oauth/authorize
-            token-uri: https://open.tiktokapis.com/v1/oauth/token
-            user-info-uri: https://open.tiktokapis.com/v1/user/info
-            user-name-attribute: data.user.id
 
 app:
   jwt:
