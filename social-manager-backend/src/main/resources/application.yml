@@ -65,17 +65,9 @@ app:
     api-key: ${LEONARDO_API_KEY}
     url: "https://cloud.leonardo.ai/api/rest/v1/generations"   
   cloudinary:
-    cloud-name: ${CLOUDINARY_CLOUD_NAME}
-    api-key: ${CLOUDINARY_API_KEY}
-    api-secret: ${CLOUDINARY_API_SECRET}
-  meta:
-    app-id: ${META_APP_ID:}
-    app-secret: ${META_APP_SECRET:}
-    redirect-uri: ${META_REDIRECT_URI:http://localhost:8080/api/auth/callback/meta}
-  tiktok:
-    client-key: ${TIKTOK_CLIENT_KEY:}
-    client-secret: ${TIKTOK_CLIENT_SECRET:}
-    redirect-uri: ${TIKTOK_REDIRECT_URI:http://localhost:8080/api/auth/callback/tiktok}
+    cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+    api-key: ${CLOUDINARY_API_KEY:}
+    api-secret: ${CLOUDINARY_API_SECRET:}
 
 server:
   port: 8080
