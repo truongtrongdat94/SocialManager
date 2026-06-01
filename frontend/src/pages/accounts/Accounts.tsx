@@ -4,9 +4,9 @@ import { api, type ApiResponse, type SocialAccountDto, getApiErrorMessage } from
 
 const PLATFORM_OPTIONS: Array<"facebook" | "instagram" | "threads" | "tiktok"> = [
 	"facebook",
-	// "instagram",
-	// "threads",
-	// "tiktok",
+	"instagram",
+	"threads",
+	"tiktok",
 ];
 
 export function Accounts() {
