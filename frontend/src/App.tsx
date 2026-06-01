@@ -7,7 +7,7 @@ import AiMediaDashboard from "@/pages/AiMediaDashboard";
 import { Post } from "@/pages/post/Post";
 import { Accounts } from "@/pages/accounts/Accounts";
 import { Stats } from "@/pages/stats/Stats";
-// import { AutoPilot } from "@/pages/autopilot/AutoPilot";
+import { AutoPilot } from "@/pages/autopilot/AutoPilot";
 import { History } from "@/pages/history/History";
 
 function ProtectedRoute() {
@@ -24,7 +24,7 @@ function DashboardLayout() {
 		{ to: "/dashboard/post", label: "Đăng bài" },
 		{ to: "/dashboard/accounts", label: "Tài khoản" },
 		{ to: "/dashboard/stats", label: "Thống kê" },
-		// { to: "/dashboard/autopilot", label: "Auto Pilot" },
+		{ to: "/dashboard/autopilot", label: "Auto Pilot" },
 		{ to: "/dashboard/history", label: "Lịch sử" },
 	];
 
@@ -99,7 +99,7 @@ const router = createBrowserRouter([
 					{ path: "post", element: <Post /> },
 					{ path: "accounts", element: <Accounts /> },
 					{ path: "stats", element: <Stats /> },
-					// { path: "autopilot", element: <AutoPilot /> },
+					{ path: "autopilot", element: <AutoPilot /> },
 					{ path: "history", element: <History /> },
 					{ path: "", element: <Navigate to="/dashboard/ai" replace /> },
 				],
